@@ -17,10 +17,18 @@ class SupervisedTrainer(Trainer):
         RESET_SEQ = "\033[0m"
 
         header_form = "{:<8.8} {:<6.6} - {:<6.6} - {:<8.8} {:<6.6} - {:<9.9} {:<12.12}| {:<9.9}- {:<6.6}"
-        value_form  = "{:<8.8} {:<6} - {:<6} - {:<8.8} {:<6.4f} - {:<9.9} {:<10.4f}| {:<9.4f}- {:<6.4f}"
+        value_form = "{:<8.8} {:<6} - {:<6} - {:<8.8} {:<6.4f} - {:<9.9} {:<10.4f}| {:<9.4f}- {:<6.4f}"
 
         self.header = header_form.format(
-            ".               ", "Epoch", "%", "Losses:", "ce", "metrics: ", "acc", "F1 ","Time"
+            ".               ",
+            "Epoch",
+            "%",
+            "Losses:",
+            "ce",
+            "metrics: ",
+            "acc",
+            "F1 ",
+            "Time",
         )
 
         self.train_form = value_form
@@ -28,9 +36,7 @@ class SupervisedTrainer(Trainer):
 
     def init_metrics(self, parameters: DotDict):
         self.metrics = DotDict(
-            fscore_fn=FScore(),
-            acc_fn=CategoricalAccuracy(),
-            avg_fn=ContinueAverage(),
+            fscore_fn=FScore(), acc_fn=CategoricalAccuracy(), avg_fn=ContinueAverage(),
         )
         self.maximum_tracker = track_maximum()
 
@@ -72,14 +78,20 @@ class SupervisedTrainer(Trainer):
                 avg_ce = M.avg_fn(loss.item()).mean
 
                 # logs
-                print(self.train_form.format(
-                    "Training: ",
-                    epoch + 1,
-                    int(100 * (i + 1) / nb_batch),
-                    "", avg_ce,
-                    "", acc, fscore,
-                    time.time() - start_time
-                ), end="\r")
+                print(
+                    self.train_form.format(
+                        "Training: ",
+                        epoch + 1,
+                        int(100 * (i + 1) / nb_batch),
+                        "",
+                        avg_ce,
+                        "",
+                        acc,
+                        fscore,
+                        time.time() - start_time,
+                    ),
+                    end="\r",
+                )
 
         T("train/Lce", avg_ce, epoch)
         T("train/f1", fscore, epoch)
@@ -115,14 +127,20 @@ class SupervisedTrainer(Trainer):
                 avg_ce = M.avg_fn(loss.item()).mean
 
                 # logs
-                print(self.val_form.format(
-                    "Validation: ",
-                    epoch + 1,
-                    int(100 * (i + 1) / nb_batch),
-                    "", avg_ce,
-                    "", acc, fscore,
-                    time.time() - start_time
-                ), end="\r")
+                print(
+                    self.val_form.format(
+                        "Validation: ",
+                        epoch + 1,
+                        int(100 * (i + 1) / nb_batch),
+                        "",
+                        avg_ce,
+                        "",
+                        acc,
+                        fscore,
+                        time.time() - start_time,
+                    ),
+                    end="\r",
+                )
 
         T("val/Lce", avg_ce, epoch)
         T("val/f1", fscore, epoch)
@@ -171,11 +189,17 @@ class SupervisedTrainer(Trainer):
                 avg_ce = M.avg_fn(loss.item()).mean
 
                 # logs
-                print(self.val_form.format(
-                    "Testing: ",
-                    1,
-                    int(100 * (i + 1) / nb_batch),
-                    "", avg_ce,
-                    "", acc, fscore,
-                    time.time() - start_time
-                ), end="\r")
+                print(
+                    self.val_form.format(
+                        "Testing: ",
+                        1,
+                        int(100 * (i + 1) / nb_batch),
+                        "",
+                        avg_ce,
+                        "",
+                        acc,
+                        fscore,
+                        time.time() - start_time,
+                    ),
+                    end="\r",
+                )

@@ -4,7 +4,13 @@ import torch.nn.functional as F
 import torch.nn as nn
 import librosa
 
-from SSL.layers import ConvPoolReLU, ConvReLU, ConvBNReLUPool, ConvAdvBNReLUPool, ConvBNPoolReLU6
+from SSL.layers import (
+    ConvPoolReLU,
+    ConvReLU,
+    ConvBNReLUPool,
+    ConvAdvBNReLUPool,
+    ConvBNPoolReLU6,
+)
 
 from typing import Tuple
 
@@ -14,15 +20,20 @@ from typing import Tuple
 # ===============================================================
 def conv_2d(ni, nf, stride=1, ks=3):
     """3x3 convolution with 1 pixel padding"""
-    return nn.Conv2d(in_channels=ni, out_channels=nf, 
-                     kernel_size=ks, stride=stride, 
-                     padding=ks//2, bias=False)
+    return nn.Conv2d(
+        in_channels=ni,
+        out_channels=nf,
+        kernel_size=ks,
+        stride=stride,
+        padding=ks // 2,
+        bias=False,
+    )
+
 
 def bn_relu_conv(ni, nf):
     """BatchNorm → ReLU → Conv2D"""
-    return nn.Sequential(nn.BatchNorm2d(ni), 
-                         nn.ReLU(inplace=True), 
-                         conv_2d(ni, nf))
+    return nn.Sequential(nn.BatchNorm2d(ni), nn.ReLU(inplace=True), conv_2d(ni, nf))
+
 
 def make_group(N, ni, nf, stride):
     """Group of residual blocks"""
@@ -33,6 +44,7 @@ def make_group(N, ni, nf, stride):
 
 class BasicBlock(nn.Module):
     """Residual block with shortcut connection"""
+
     def __init__(self, ni, nf, stride=1):
         super().__init__()
         self.bn = nn.BatchNorm2d(ni)
@@ -41,45 +53,48 @@ class BasicBlock(nn.Module):
         self.shortcut = lambda x: x
         if ni != nf:
             self.shortcut = conv_2d(ni, nf, stride, 1)
-    
+
     def forward(self, x):
         x = F.relu(self.bn(x), inplace=True)
         r = self.shortcut(x)
         x = self.conv1(x)
         x = self.conv2(x) * 0.2
         return x.add_(r)
-    
+
+
 class WideResNet(nn.Module):
     def __init__(self, n_groups, N, n_classes, k=1, n_start=16):
-        super().__init__()      
+        super().__init__()
         # Increase channels to n_start using conv layer
         layers = [conv_2d(3, n_start)]
         n_channels = [n_start]
-        
+
         # Add groups of BasicBlock(increase channels & downsample)
         for i in range(n_groups):
-            n_channels.append(n_start*(2**i)*k)
-            stride = 2 if i>0 else 1
-            layers += make_group(N, n_channels[i], 
-                                 n_channels[i+1], stride)
-        
+            n_channels.append(n_start * (2 ** i) * k)
+            stride = 2 if i > 0 else 1
+            layers += make_group(N, n_channels[i], n_channels[i + 1], stride)
+
         # Pool, flatten & add linear layer for classification
-        layers += [nn.BatchNorm2d(n_channels[3]), 
-                   nn.ReLU(inplace=True), 
-                   nn.AdaptiveAvgPool2d(1), 
-                   nn.Flatten(), 
-                   nn.Linear(n_channels[3], n_classes)]
-        
+        layers += [
+            nn.BatchNorm2d(n_channels[3]),
+            nn.ReLU(inplace=True),
+            nn.AdaptiveAvgPool2d(1),
+            nn.Flatten(),
+            nn.Linear(n_channels[3], n_classes),
+        ]
+
         self.features = nn.Sequential(*layers)
-        
+
     def forward(self, x):
         return self.features(x)
-    
-def wrn_22(): 
+
+
+def wrn_22():
     return WideResNet(n_groups=3, N=3, n_classes=10, k=6)
 
-# ============================================================
 
+# ============================================================
 
 
 class cnn0(nn.Module):
@@ -112,10 +127,9 @@ class cnn0(nn.Module):
 
 
 class cnn03(nn.Module):
-    def __init__(self,
-            input_shape: Tuple[int, int] = (64, 173),
-            num_classes: int = 10,
-            **kwargs) -> nn.Module:
+    def __init__(
+        self, input_shape: Tuple[int, int] = (64, 173), num_classes: int = 10, **kwargs
+    ) -> nn.Module:
         super().__init__()
 
         self.features = nn.Sequential(
@@ -132,9 +146,7 @@ class cnn03(nn.Module):
         print(linear_input, num_classes)
 
         self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Dropout(0.5),
-            nn.Linear(linear_input, num_classes),
+            nn.Flatten(), nn.Dropout(0.5), nn.Linear(linear_input, num_classes),
         )
 
     def forward(self, x):
@@ -208,8 +220,8 @@ class cnn04(nn.Module):
         x = self.classifier(x)
 
         return x
-    
-    
+
+
 class cnn01(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
@@ -238,7 +250,7 @@ class cnn01(nn.Module):
 
         return x
 
-    
+
 class cnn02(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
@@ -330,6 +342,7 @@ class cnn07(nn.Module):
 
         return x
 
+
 class cnn06(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
@@ -359,6 +372,7 @@ class cnn06(nn.Module):
 
         return x
 
+
 class cnn1(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
@@ -372,9 +386,7 @@ class cnn1(nn.Module):
         )
 
         self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Dropout(0.5),
-            nn.Linear(2560, 10),
+            nn.Flatten(), nn.Dropout(0.5), nn.Linear(2560, 10),
         )
 
     def forward(self, x):
@@ -384,7 +396,7 @@ class cnn1(nn.Module):
         x = self.classifier(x)
 
         return x
-    
+
 
 class cnn2(nn.Module):
     def __init__(self, **kwargs):
@@ -400,9 +412,7 @@ class cnn2(nn.Module):
         )
 
         self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Dropout(0.5),
-            nn.Linear(2560, 10),
+            nn.Flatten(), nn.Dropout(0.5), nn.Linear(2560, 10),
         )
 
     def forward(self, x):
@@ -412,8 +422,8 @@ class cnn2(nn.Module):
         x = self.classifier(x)
 
         return x
-    
-    
+
+
 class cnn3(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
@@ -428,9 +438,7 @@ class cnn3(nn.Module):
         )
 
         self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Dropout(0.5),
-            nn.Linear(800, 10),
+            nn.Flatten(), nn.Dropout(0.5), nn.Linear(800, 10),
         )
 
     def forward(self, x):
@@ -440,8 +448,8 @@ class cnn3(nn.Module):
         x = self.classifier(x)
 
         return x
-    
-    
+
+
 class cnn4(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
@@ -461,9 +469,7 @@ class cnn4(nn.Module):
         )
 
         self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Dropout(0.5),
-            nn.Linear(3600, 10),
+            nn.Flatten(), nn.Dropout(0.5), nn.Linear(3600, 10),
         )
 
     def forward(self, x):
@@ -473,9 +479,8 @@ class cnn4(nn.Module):
         x = self.classifier(x)
 
         return x
-    
-    
-    
+
+
 class cnn5(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
@@ -494,9 +499,7 @@ class cnn5(nn.Module):
         )
 
         self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Dropout(0.5),
-            nn.Linear(1600, 10),
+            nn.Flatten(), nn.Dropout(0.5), nn.Linear(1600, 10),
         )
 
     def forward(self, x):
@@ -507,7 +510,7 @@ class cnn5(nn.Module):
 
         return x
 
-    
+
 class cnn6(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
@@ -521,9 +524,7 @@ class cnn6(nn.Module):
         )
 
         self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Dropout(0.5),
-            nn.Linear(1600, 10),
+            nn.Flatten(), nn.Dropout(0.5), nn.Linear(1600, 10),
         )
 
     def forward(self, x):
@@ -534,7 +535,7 @@ class cnn6(nn.Module):
 
         return x
 
-    
+
 class cnn61(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
@@ -564,7 +565,7 @@ class cnn61(nn.Module):
 
         return x
 
-    
+
 class cnn7(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
@@ -578,9 +579,7 @@ class cnn7(nn.Module):
         )
 
         self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Dropout(0.5),
-            nn.Linear(2560, 10),
+            nn.Flatten(), nn.Dropout(0.5), nn.Linear(2560, 10),
         )
 
     def forward(self, x):
@@ -590,37 +589,3 @@ class cnn7(nn.Module):
         x = self.classifier(x)
 
         return x
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

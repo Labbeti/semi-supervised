@@ -1,4 +1,3 @@
-
 from torch.optim import Optimizer, Adam
 
 
@@ -22,4 +21,3 @@ def mean_teacher(student, learning_rate: float = 0.003, **kwargs) -> Optimizer:
 
 def fixmatch(model, learning_rate: float = 0.001, **kwargs) -> Optimizer:
     return Adam(model.parameters(), lr=learning_rate)
-    

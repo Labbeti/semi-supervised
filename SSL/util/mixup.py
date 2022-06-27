@@ -1,4 +1,3 @@
-
 import torch
 
 from torch import Tensor
@@ -24,7 +23,9 @@ class MixUp(Module):
             - if alpha -> 1 and apply_max == False, lambda sampled from an uniform distribution in [0.0, 1.0],
     """
 
-    def __init__(self, alpha: float = 0.4, apply_max: bool = False, mix_labels: bool = True):
+    def __init__(
+        self, alpha: float = 0.4, apply_max: bool = False, mix_labels: bool = True
+    ):
         """
             Build the MixUp Module.
 
@@ -43,13 +44,18 @@ class MixUp(Module):
         self._beta = Beta(alpha, alpha)
         self._lambda = 0.0
 
-    def forward(self, batch_a: Tensor, batch_b: Tensor, labels_a: Tensor, labels_b: Tensor) -> (Tensor, Tensor):
+    def forward(
+        self, batch_a: Tensor, batch_b: Tensor, labels_a: Tensor, labels_b: Tensor
+    ) -> (Tensor, Tensor):
         """
             Apply MixUp to batches and labels.
         """
         if batch_a.shape != batch_b.shape or labels_a.shape != labels_b.shape:
-            raise RuntimeError("Invalid shapes for MixUp : ({:s} != {:s} or {:s} != {:s})".format(
-                batch_a.shape, batch_b.shape, labels_a.shape, labels_b.shape))
+            raise RuntimeError(
+                "Invalid shapes for MixUp : ({:s} != {:s} or {:s} != {:s})".format(
+                    batch_a.shape, batch_b.shape, labels_a.shape, labels_b.shape
+                )
+            )
 
         # Sample from Beta distribution
         self._lambda = self._beta.sample().item() if self.alpha > 0.0 else 1.0
@@ -61,9 +67,8 @@ class MixUp(Module):
         if self.mix_labels:
             labels_mix = labels_a * self._lambda + labels_b * (1.0 - self._lambda)
 
-            
         batch_mix = batch_a * self._lambda + batch_b * (1.0 - self._lambda)
-        
+
         return batch_mix, labels_mix
 
     def get_last_lambda(self) -> float:
@@ -77,12 +82,15 @@ class MixUpBatchShuffle(Module):
     """
         Apply MixUp transform with the same batch in a different order. See MixUp module for details.
     """
-    def __init__(self, alpha: float = 0.4, apply_max: bool = False, mix_labels: bool = True):
+
+    def __init__(
+        self, alpha: float = 0.4, apply_max: bool = False, mix_labels: bool = True
+    ):
         super().__init__()
         self.mixup = MixUp(alpha, apply_max, mix_labels)
 
     def forward(self, batch: Tensor, labels: Tensor) -> (Tensor, Tensor):
-        assert batch.shape[0] == labels.shape[0]
+        assert batch.shape[0] == labels.shape[0], f"{batch=}, {labels=}"
         batch_size = batch.shape[0]
         indexes = torch.randperm(batch_size)
         batch_shuffle = batch[indexes]

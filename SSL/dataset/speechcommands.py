@@ -1,10 +1,15 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import os
-from typing import Tuple
+
+from typing import Optional, Tuple
 
 import torchaudio
-from torch.utils.data import Dataset
+
 from torch import Tensor
 from torch.nn import Module
+from torch.utils.data.dataset import Dataset
 from torchaudio.datasets.utils import (
     download_url,
     extract_archive,
@@ -15,10 +20,8 @@ URL = "speech_commands_v0.02"
 HASH_DIVIDER = "_nohash_"
 EXCEPT_FOLDER = ["_background_noise_"]
 _CHECKSUMS = {
-    "https://storage.googleapis.com/download.tensorflow.org/data/speech_commands_v0.01.tar.gz":
-    "3cd23799cb2bbdec517f1cc028f8d43c",
-    "https://storage.googleapis.com/download.tensorflow.org/data/speech_commands_v0.02.tar.gz":
-    "6b74f3901214cb2c2934e98196829835",
+    "https://storage.googleapis.com/download.tensorflow.org/data/speech_commands_v0.01.tar.gz": "3cd23799cb2bbdec517f1cc028f8d43c",
+    "https://storage.googleapis.com/download.tensorflow.org/data/speech_commands_v0.02.tar.gz": "6b74f3901214cb2c2934e98196829835",
 }
 
 
@@ -28,11 +31,13 @@ class SPEECHCOMMANDS(Dataset):
     waveform, sample_rate, label, speaker_id, utterance_number
     """
 
-    def __init__(self,
-                 root: str,
-                 url: str = URL,
-                 download: bool = False,
-                 transform: Module = None) -> None:
+    def __init__(
+        self,
+        root: str,
+        url: str = URL,
+        download: bool = False,
+        transform: Optional[Module] = None,
+    ) -> None:
 
         if url in ["speech_commands_v0.01", "speech_commands_v0.02"]:
             base_url = "https://storage.googleapis.com/download.tensorflow.org/data/"
@@ -43,7 +48,7 @@ class SPEECHCOMMANDS(Dataset):
         self.root = root
         self.url = url
         self.transform = transform
-        print(f'print fron SPEECHCOMMANDS {self.transform}')
+        print(f"print fron SPEECHCOMMANDS {self.transform}")
 
         self.basename = os.path.basename(url)
 
@@ -61,7 +66,9 @@ class SPEECHCOMMANDS(Dataset):
     def __getitem__(self, n: int) -> Tuple[Tensor, int, str, str, int]:
         fileid = self._walker[n]
 
-        waveform, sr, label, speaker_id, utterance_number = self._load_item(fileid, self._path)
+        waveform, sr, label, speaker_id, utterance_number = self._load_item(
+            fileid, self._path
+        )
 
         return waveform, sr, label, speaker_id, utterance_number
 
@@ -73,9 +80,9 @@ class SPEECHCOMMANDS(Dataset):
 
         # Is the comprehension list readable enough?
         list_commands = [
-            dir for dir in os.listdir(self._path)
-            if os.path.isdir(os.path.join(self._path, dir))
-            and dir not in EXCEPT_FOLDER
+            dir
+            for dir in os.listdir(self._path)
+            if os.path.isdir(os.path.join(self._path, dir)) and dir not in EXCEPT_FOLDER
         ]
         list_commands.sort()
 
@@ -102,8 +109,7 @@ class SPEECHCOMMANDS(Dataset):
 
         else:
             checksum = _CHECKSUMS.get(self.url, None)
-            download_url(self.url, self.root, hash_value=checksum,
-                         hash_type="md5")
+            download_url(self.url, self.root, hash_value=checksum, hash_type="md5")
             extract_archive(archive_path, self._path)
 
     def _check_integrity(self, path, checksum=None) -> bool:
@@ -118,8 +124,7 @@ class SPEECHCOMMANDS(Dataset):
         # TODO add checksum verification
         return True
 
-    def _load_item(self, filepath: str, path: str) -> Tuple[Tensor, int, str,
-                                                            str, int]:
+    def _load_item(self, filepath: str, path: str) -> Tuple[Tensor, int, str, str, int]:
         relpath = os.path.relpath(filepath, path)
         label, filename = os.path.split(relpath)
         speaker, _ = os.path.splitext(filename)
@@ -128,5 +133,5 @@ class SPEECHCOMMANDS(Dataset):
         utterance_number = int(utterance_number)
 
         # Load audio
-        waveform, sample_rate = torchaudio.load(filepath)
+        waveform, sample_rate = torchaudio.load(filepath)  # type: ignore
         return waveform, sample_rate, label, speaker_id, utterance_number

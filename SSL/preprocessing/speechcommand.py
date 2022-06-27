@@ -5,7 +5,7 @@ from SSL.util.transforms import PadUpTo, Squeeze
 from torchaudio.transforms import MelSpectrogram, AmplitudeToDB
 from SSL.util.augments import create_composer, augmentation_factory
 
-aug_pool = augmentation_factory('weak', ratio=0.5, sr=16000)
+aug_pool = augmentation_factory("weak", ratio=0.5, sr=16000)
 
 spec_transforms = Sequential(
     PadUpTo(target_length=16000, mode="constant", value=0),

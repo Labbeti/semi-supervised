@@ -32,7 +32,11 @@ def get_model_from_name(model_name, module_list):
                 return obj
 
     # Error message if model doesn't exist for the dataset
-    available_models = [name for name, obj in all_members if inspect.isclass(obj) or inspect.isfunction(obj)]
+    available_models = [
+        name
+        for name, obj in all_members
+        if inspect.isclass(obj) or inspect.isfunction(obj)
+    ]
     msg = f"Model {model_name} doesn't exist for this dataset\n"
     msg += f"Available models are: {available_models}"
     raise ValueError(msg)
@@ -40,10 +44,11 @@ def get_model_from_name(model_name, module_list):
 
 def load_model(dataset_name: str, model_name: str):
     dataset_name = dataset_name.lower()
-    
+
     if dataset_name not in dataset_mapper:
         available_dataset = ", ".join(list(dataset_mapper.keys()))
         raise ValueError(
-            f"Dataset {dataset_name} is not available.\n Available datasets: {available_dataset}")
+            f"Dataset {dataset_name} is not available.\n Available datasets: {available_dataset}"
+        )
 
     return get_model_from_name(model_name, dataset_mapper[dataset_name])

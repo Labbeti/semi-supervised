@@ -1,4 +1,5 @@
 import os
+
 os.environ["MKL_NUM_THREADS"] = "2"
 os.environ["NUMEXPR_NU M_THREADS"] = "2"
 os.environ["OMP_NUM_THREADS"] = "2"
@@ -20,38 +21,36 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 
 
-@hydra.main(config_name='../../config/supervised/ubs8k.yaml')
+@hydra.main(config_name="../../config/supervised/ubs8k.yaml")
 def run(cfg: DictConfig) -> DictConfig:
     # keep the file directory as the current working directory
     os.chdir(hydra.utils.get_original_cwd())
 
     print(OmegaConf.to_yaml(cfg))
-    print('current dir: ', os.getcwd())
+    print("current dir: ", os.getcwd())
 
     reset_seed(cfg.train_param.seed)
 
     # -------- Get the pre-processer --------
-    train_transform, val_transform = load_preprocesser(cfg.dataset.dataset, "supervised", use_augmentation=cfg.train_param.augmentation)
+    train_transform, val_transform = load_preprocesser(
+        cfg.dataset.dataset, "supervised", use_augmentation=cfg.train_param.augmentation
+    )
 
     # -------- Get the dataset --------
     _, train_loader, val_loader = load_dataset(
         cfg.dataset.dataset,
         "supervised",
-
         dataset_root=cfg.path.dataset_root,
         supervised_ratio=cfg.train_param.supervised_ratio,
         batch_size=cfg.train_param.batch_size,
         train_folds=cfg.train_param.train_folds,
         val_folds=cfg.train_param.val_folds,
-
         train_transform=train_transform,
         val_transform=val_transform,
         augmentation=cfg.train_param.augmentation,
-
         num_workers=cfg.hardware.nb_cpu,  # With the cache enable, it is faster to have run 0 worker
         pin_memory=True,
-
-        verbose=1
+        verbose=1,
     )
 
     # The input shape of the data is used to generate the model
@@ -70,44 +69,53 @@ def run(cfg: DictConfig) -> DictConfig:
 
     # -------- Tensorboard and checkpoint --------
     # -- Prepare suffix
-    sufix_title = ''
-    sufix_title += f'_{cfg.train_param.learning_rate}-lr'
-    sufix_title += f'_{cfg.train_param.supervised_ratio}-sr'
-    sufix_title += f'_{cfg.train_param.batch_size}-bs'
-    sufix_title += f'_{cfg.train_param.seed}-seed'
-    sufix_title += f'_{cfg.train_param.augmentation}-aug'
+    sufix_title = ""
+    sufix_title += f"_{cfg.train_param.learning_rate}-lr"
+    sufix_title += f"_{cfg.train_param.supervised_ratio}-sr"
+    sufix_title += f"_{cfg.train_param.batch_size}-bs"
+    sufix_title += f"_{cfg.train_param.seed}-seed"
+    sufix_title += f"_{cfg.train_param.augmentation}-aug"
 
     # -------- Tensorboard logging --------
-    tensorboard_sufix = sufix_title + f'_{cfg.train_param.nb_epoch}-e'
-    tensorboard_sufix += f'__{cfg.path.sufix}'
-    tensorboard_title = f'{get_datetime()}_{cfg.model.model}_{tensorboard_sufix}'
-    log_dir = f'{cfg.path.tensorboard_path}/{cfg.model.model}/{tensorboard_title}'
-    print('Tensorboard log at: ', log_dir)
+    tensorboard_sufix = sufix_title + f"_{cfg.train_param.nb_epoch}-e"
+    tensorboard_sufix += f"__{cfg.path.sufix}"
+    tensorboard_title = f"{get_datetime()}_{cfg.model.model}_{tensorboard_sufix}"
+    log_dir = f"{cfg.path.tensorboard_path}/{cfg.model.model}/{tensorboard_title}"
+    print("Tensorboard log at: ", log_dir)
 
     tensorboard = mSummaryWriter(log_dir=log_dir, comment=model_func.__name__)
 
     # -------- Optimizer, callbacks, loss and checkpoint --------
-    optimizer = load_optimizer(cfg.dataset.dataset, "supervised", learning_rate=cfg.train_param.learning_rate, model=model)
-    callbacks = load_callbacks(cfg.dataset.dataset, "supervised", optimizer=optimizer, nb_epoch=cfg.train_param.nb_epoch)
+    optimizer = load_optimizer(
+        cfg.dataset.dataset,
+        "supervised",
+        learning_rate=cfg.train_param.learning_rate,
+        model=model,
+    )
+    callbacks = load_callbacks(
+        cfg.dataset.dataset,
+        "supervised",
+        optimizer=optimizer,
+        nb_epoch=cfg.train_param.nb_epoch,
+    )
     loss_ce = nn.CrossEntropyLoss(reduction="mean")
 
-    checkpoint_sufix = sufix_title + f'__{cfg.path.sufix}'
-    checkpoint_title = f'{cfg.model.model}_{checkpoint_sufix}'
-    checkpoint_path = f'{cfg.path.checkpoint_path}/{cfg.model.model}/{checkpoint_title}'
+    checkpoint_sufix = sufix_title + f"__{cfg.path.sufix}"
+    checkpoint_title = f"{cfg.model.model}_{checkpoint_sufix}"
+    checkpoint_path = f"{cfg.path.checkpoint_path}/{cfg.model.model}/{checkpoint_title}"
     checkpoint = CheckPoint(model, optimizer, mode="max", name=checkpoint_path)
 
     # -------- Metrics and print formater --------
-    metrics = DotDict({
-        'fscore': FScore(),
-        'acc': CategoricalAccuracy(),
-    })
+    metrics = DotDict({"fscore": FScore(), "acc": CategoricalAccuracy(),})
     avg = ContinueAverage()
 
     reset_metrics = lambda: [m.reset() for m in [metrics.fscore, metrics.acc, avg]]
 
     maximum_tracker = track_maximum()
 
-    header, train_formater, val_formater = get_training_printers({'ce': loss_ce}, metrics)
+    header, train_formater, val_formater = get_training_printers(
+        {"ce": loss_ce}, metrics
+    )
 
     # -------- Training and Validation function --------
     def train(epoch):
@@ -139,12 +147,18 @@ def run(cfg: DictConfig) -> DictConfig:
                 avg_ce = avg(loss.item()).mean(size=None)
 
                 # logs
-                print(train_formater.format(
-                    epoch + 1, i, nb_batch,
-                    avg_ce,
-                    acc, fscore,
-                    time.time() - start_time
-                ), end='\r')
+                print(
+                    train_formater.format(
+                        epoch + 1,
+                        i,
+                        nb_batch,
+                        avg_ce,
+                        acc,
+                        fscore,
+                        time.time() - start_time,
+                    ),
+                    end="\r",
+                )
 
         tensorboard.add_scalar("train/Lce", avg_ce, epoch)
         tensorboard.add_scalar("train/f1", fscore, epoch)
@@ -176,18 +190,26 @@ def run(cfg: DictConfig) -> DictConfig:
                 avg_ce = avg(loss.item()).mean(size=None)
 
                 # logs
-                print(val_formater.format(
-                    epoch + 1, i, nb_batch,
-                    avg_ce,
-                    acc, fscore,
-                    time.time() - start_time
-                ), end='\r')
+                print(
+                    val_formater.format(
+                        epoch + 1,
+                        i,
+                        nb_batch,
+                        avg_ce,
+                        acc,
+                        fscore,
+                        time.time() - start_time,
+                    ),
+                    end="\r",
+                )
 
         tensorboard.add_scalar("val/Lce", avg_ce, epoch)
         tensorboard.add_scalar("val/f1", fscore, epoch)
         tensorboard.add_scalar("val/acc", acc, epoch)
 
-        tensorboard.add_scalar("hyperparameters/learning_rate", get_lr(optimizer), epoch)
+        tensorboard.add_scalar(
+            "hyperparameters/learning_rate", get_lr(optimizer), epoch
+        )
 
         tensorboard.add_scalar("max/acc", maximum_tracker("acc", acc), epoch)
         tensorboard.add_scalar("max/f1", maximum_tracker("f1", fscore), epoch)
@@ -242,5 +264,5 @@ def run(cfg: DictConfig) -> DictConfig:
     tensorboard.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run()

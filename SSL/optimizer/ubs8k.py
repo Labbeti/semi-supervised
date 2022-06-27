@@ -21,4 +21,3 @@ def mean_teacher(student, learning_rate: float, **kwargs) -> Optimizer:
 
 def fixmatch(model, learning_rate: float, **kwargs) -> Optimizer:
     return Adam(model.parameters(), lr=learning_rate)
-    

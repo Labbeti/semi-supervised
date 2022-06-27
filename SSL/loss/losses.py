@@ -5,35 +5,40 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
+
 class Activation(Enum):
-    SIGMOID=0
-    SOFTMAX=1
+    SIGMOID = 0
+    SOFTMAX = 1
 
 
 class ValidLoss(Enum):
-    CROSS_ENTROPY=0
-    BINARY_CROSS_ENTROPY=1
+    CROSS_ENTROPY = 0
+    BINARY_CROSS_ENTROPY = 1
 
 
 class DCTSupWithLogitsLoss(nn.Module):
-    def __init__(self, reduction: str = 'mean', sub_loss: ValidLoss = ValidLoss.BINARY_CROSS_ENTROPY):
+    def __init__(
+        self,
+        reduction: str = "mean",
+        sub_loss: ValidLoss = ValidLoss.BINARY_CROSS_ENTROPY,
+    ):
         super().__init__()
 
         if sub_loss == ValidLoss.CROSS_ENTROPY:
             self.sub_loss = nn.CrossEntropyLoss(reduction=reduction)
-        
+
         else:
             self.sub_loss = nn.BCEWithLogitsLoss(reduction=reduction)
-            
+
         print(self.sub_loss)
 
     def forward(self, input1: Tuple, input2: Tuple) -> Tensor:
         logits_1, y_1 = input1
         logits_2, y_2 = input2
-        
+
         loss1 = self.sub_loss(logits_1, y_1)
         loss2 = self.sub_loss(logits_2, y_2)
-        return (loss1 + loss2)
+        return loss1 + loss2
 
 
 class DCTCotWithLogitsLoss(nn.Module):
@@ -49,11 +54,11 @@ class DCTCotWithLogitsLoss(nn.Module):
 
     def forward(self, input1: Tensor, input2: Tensor) -> Tensor:
         U_batch_size = input1.size()[0]
-        eps=1e-8
+        eps = 1e-8
 
         a1 = 0.5 * (self.S(input1) + self.S(input2))
         a1 = torch.clamp(a1, min=eps)
-        
+
         loss1 = a1 * torch.log(a1)
         loss1 = -torch.sum(loss1)
 
@@ -78,7 +83,9 @@ class DCTDiffWithLogitsLoss(nn.Module):
             self.LS = nn.LogSigmoid()
         pass
 
-    def forward(self, input_s1: Tuple, input_s2: Tuple, input_u1: Tuple, input_u2: Tuple) -> Tensor:
+    def forward(
+        self, input_s1: Tuple, input_s2: Tuple, input_u1: Tuple, input_u2: Tuple
+    ) -> Tensor:
         logits_s1, adv_logits_s1 = input_s1
         logits_s2, adv_logits_s2 = input_s2
         logits_u1, adv_logits_u1 = input_u1
@@ -103,12 +110,11 @@ class DCTDiffWithLogitsLoss(nn.Module):
         return -(a + b + c + d) / total_batch_size
 
 
-
 def loss_sup(logit_S1, logit_S2, labels_S1, labels_S2):
     ce = nn.CrossEntropyLoss()
     loss1 = ce(logit_S1, labels_S1)
     loss2 = ce(logit_S2, labels_S2)
-    return (loss1 + loss2)
+    return loss1 + loss2
 
 
 def p_loss_sup(logit_S1, logit_S2, labels_S1, labels_S2):
@@ -129,14 +135,14 @@ def loss_cot(U_p1, U_p2, activation: Activation = Activation.SOFTMAX):
         LS = nn.LogSigmoid()
 
     else:
-        raise f'This activation ({activation}) is not available'
+        raise f"This activation ({activation}) is not available"
 
     U_batch_size = U_p1.size()[0]
-    eps=1e-8
+    eps = 1e-8
 
     a1 = 0.5 * (S(U_p1) + S(U_p2))
     a1 = torch.clamp(a1, min=eps)
-    
+
     loss1 = a1 * torch.log(a1)
     loss1 = -torch.sum(loss1)
 
@@ -155,7 +161,7 @@ def JensenShanon(logits_1, logits_2):
 
 def js_from_softmax(p1, p2):
     U_batch_size = p1.size()[0]
-    eps=1e-8
+    eps = 1e-8
 
     a1 = 0.5 * (p1 + p2)
     a1 = torch.clamp(a1, min=eps)
@@ -172,8 +178,16 @@ def js_from_softmax(p1, p2):
     return (loss1 - 0.5 * (loss2 + loss3)) / U_batch_size
 
 
-def loss_diff(logit_S1, logit_S2, perturbed_logit_S1, perturbed_logit_S2,
-              logit_U1, logit_U2, perturbed_logit_U1, perturbed_logit_U2):
+def loss_diff(
+    logit_S1,
+    logit_S2,
+    perturbed_logit_S1,
+    perturbed_logit_S2,
+    logit_U1,
+    logit_U2,
+    perturbed_logit_U1,
+    perturbed_logit_U2,
+):
     S = nn.Softmax(dim=1)
     LS = nn.LogSoftmax(dim=1)
 
@@ -210,18 +224,19 @@ def loss_diff_fusion(logits_s, adv_logits_s, logits_u, adv_logits_u):
     return -(a + b) / total_batch_size
 
 
-def loss_diff_fusion_partial(fusion_s, adv_logits_s1, adv_logits_s2,
-                             fusion_u, adv_logits_u1, adv_logits_u2):
+def loss_diff_fusion_partial(
+    fusion_s, adv_logits_s1, adv_logits_s2, fusion_u, adv_logits_u1, adv_logits_u2
+):
     LS = nn.LogSoftmax(dim=1)
 
     S_batch_size = fusion_s.size()[0]
     U_batch_size = fusion_u.size()[0]
     total_batch_size = S_batch_size + U_batch_size
 
-    a = fusion_s * ( LS(adv_logits_s1) + LS(adv_logits_s2) )
+    a = fusion_s * (LS(adv_logits_s1) + LS(adv_logits_s2))
     a = torch.sum(a)
 
-    b = fusion_u * ( LS(adv_logits_u1) + LS(adv_logits_u2) )
+    b = fusion_u * (LS(adv_logits_u1) + LS(adv_logits_u2))
     b = torch.sum(b)
 
     return -(a + b) / total_batch_size

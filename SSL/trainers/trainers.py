@@ -31,8 +31,12 @@ class Trainer:
 
         # Logs related
         abs_path = os.path.dirname(os.path.abspath(__file__))
-        self.tensorboard_path = os.path.join(abs_path, "..", "..", "tensorboard", dataset, framework )
-        self.checkpoint_path = os.path.join(abs_path, "..", "..", "model_save", dataset, framework)
+        self.tensorboard_path = os.path.join(
+            abs_path, "..", "..", "tensorboard", dataset, framework
+        )
+        self.checkpoint_path = os.path.join(
+            abs_path, "..", "..", "model_save", dataset, framework
+        )
         self.tensorboard = None
         self.checkpoint = None
 
@@ -47,11 +51,13 @@ class Trainer:
         self.parameters = None
         self.extra_hparams = DotDict()
 
-    def init_trainer(self,
-                     parameters: dict,
-                     num_workers: int = 0,
-                     pin_memory: bool = True,
-                     verbose: int = 1,):
+    def init_trainer(
+        self,
+        parameters: dict,
+        num_workers: int = 0,
+        pin_memory: bool = True,
+        verbose: int = 1,
+    ):
         """ Mandatory parameters
         dataset_root
         supervised_ratio
@@ -95,7 +101,7 @@ class Trainer:
             framework=self.framework,
             train_transform=self.train_transform,
             val_transform=self.val_transform,
-            **parameters
+            **parameters,
         )
 
         self.manager, self.train_loader, self.val_loader = outputs
@@ -110,8 +116,7 @@ class Trainer:
 
         model_func = load_model(self.dataset, self.model_str)
         self.model = model_func(
-            input_shape=self.input_shape,
-            num_classes=self.num_classes,
+            input_shape=self.input_shape, num_classes=self.num_classes,
         )
         self.model = self.model.cuda()
 
@@ -201,10 +206,12 @@ class Trainer:
         checkpoint_title = "%s/%sS/%s_%.1fS" % title_element
         checkpoint_title += suffix
         self.checkpoint = CheckPoint(
-            self.model, self.optimizer,
+            self.model,
+            self.optimizer,
             mode="max",
-            name=f"{self.checkpoint_path}/{checkpoint_title}")
-        
+            name=f"{self.checkpoint_path}/{checkpoint_title}",
+        )
+
     def init_logs(self, parameters: DotDict, suffix: str = ""):
         print("Prepare the log system")
         title_element = (
@@ -218,22 +225,22 @@ class Trainer:
         tensorboard_title = "%s/%sS/%s_%s_%.1fS" % title_element
         tensorboard_title += suffix
 
-        self.tensorboard = SummaryWriter(log_dir="%s/%s" % (self.tensorboard_path, tensorboard_title))
+        self.tensorboard = SummaryWriter(
+            log_dir="%s/%s" % (self.tensorboard_path, tensorboard_title)
+        )
 
     def save_hparams(self, parameters: dict):
-        hparams = dict(
-            **self.extra_hparams, **parameters
-        )
+        hparams = dict(**self.extra_hparams, **parameters)
 
         hparams["model"] = self.model_str
 
         # Transform every Iterable into a str
         for key, value in parameters.items():
             if isinstance(value, (list, tuple, set)):
-                hparams[key] = "["+",".join(map(str, value))+"]"
+                hparams[key] = "[" + ",".join(map(str, value)) + "]"
             else:
                 hparams[key] = str(value)
-        
+
         final_metrics = self.maximum_tracker.max
 
         self.tensorboard.add_hparams(hparams, final_metrics)
@@ -257,8 +264,12 @@ class Trainer:
 
         elif self.dataset.lower() in ["esc50"]:
             return 50
-        
-        elif self.dataset.lower() in ["audioset", "audioset-balanced", "audioset-unbalanced"]:
+
+        elif self.dataset.lower() in [
+            "audioset",
+            "audioset-balanced",
+            "audioset-unbalanced",
+        ]:
             return 527
 
         else:

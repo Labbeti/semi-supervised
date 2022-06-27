@@ -5,9 +5,15 @@ import os
 
 
 class CheckPoint:
-    def __init__(self, model: list, optimizer,
-                 mode: str = "max", name: str = "best",
-                 nb_gpu: int = 1, verbose: bool = True):
+    def __init__(
+        self,
+        model: list,
+        optimizer,
+        mode: str = "max",
+        name: str = "best",
+        nb_gpu: int = 1,
+        verbose: bool = True,
+    ):
         self.mode = mode
 
         self.name = name
@@ -33,14 +39,14 @@ class CheckPoint:
         os.makedirs(os.path.dirname(self.name), exist_ok=True)
 
     def _init_state(self):
-        self.best_state = {'state_dict': None, 'optimizer': None, 'epoch': None}
-        self.last_state = {'state_dict': None, 'optimizer': None, 'epoch': None}
+        self.best_state = {"state_dict": None, "optimizer": None, "epoch": None}
+        self.last_state = {"state_dict": None, "optimizer": None, "epoch": None}
 
     def _init_message(self):
         if self.verbose:
-            print('checkpoint initialise at: ', os.path.abspath(self.name))
-            print('name: ', os.path.basename(self.name))
-            print('mode: ', self.mode)
+            print("checkpoint initialise at: ", os.path.abspath(self.name))
+            print("name: ", os.path.basename(self.name))
+            print("mode: ", self.mode)
 
     def step(self, new_value, iter: int = None):
         if self.epoch_counter == 0:
@@ -66,7 +72,7 @@ class CheckPoint:
             "state_dict": [m.state_dict() for m in self.model],
             "optimizer": self.optimizer.state_dict(),
         }
-        state['epoch'] = self.epoch_counter if iter is None else iter
+        state["epoch"] = self.epoch_counter if iter is None else iter
 
         if new_value is not None:
             state["best_metric"] = new_value
@@ -141,17 +147,27 @@ class CheckPoint:
     def _clean_state_dict(self, state_dict) -> OrderedDict:
         new_state_dict = OrderedDict()
         for name, v in state_dict.items():
-            if 'module.' in name[:7]:
-                name = name[7:] # remove `module.`
+            if "module." in name[:7]:
+                name = name[7:]  # remove `module.`
 
             new_state_dict[name] = v
 
         return new_state_dict
-    
+
+
 class mSummaryWriter(SummaryWriter):
-    def __init__(self, log_dir=None, comment='', purge_step=None, max_queue=10,
-                 flush_secs=120, filename_suffix=''):
-        super().__init__(log_dir, comment, purge_step, max_queue, flush_secs, filename_suffix)
+    def __init__(
+        self,
+        log_dir=None,
+        comment="",
+        purge_step=None,
+        max_queue=10,
+        flush_secs=120,
+        filename_suffix="",
+    ):
+        super().__init__(
+            log_dir, comment, purge_step, max_queue, flush_secs, filename_suffix
+        )
         self.history = dict()
 
     def add_scalar(self, tag, scalar_value, global_step=None, walltime=None):

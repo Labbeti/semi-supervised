@@ -5,7 +5,7 @@ from torchaudio.transforms import MelSpectrogram, AmplitudeToDB
 
 from SSL.util.augments import create_composer, augmentation_factory
 
-aug_pool = augmentation_factory('weak', ratio=0.5, sr=44100)
+aug_pool = augmentation_factory("weak", ratio=0.5, sr=44100)
 
 spec_transforms = Sequential(
     MelSpectrogram(sample_rate=44100, n_fft=2048, hop_length=512, n_mels=64),

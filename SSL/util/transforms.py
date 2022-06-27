@@ -27,8 +27,12 @@ class PadUpTo(nn.Module):
 
     def forward(self, x):
         actual_length = x.size()[-1]
-        return F.pad(input=x, pad=(0, (self.target_length - actual_length)),
-                     mode=self.mode, value=self.value)
+        return F.pad(
+            input=x,
+            pad=(0, (self.target_length - actual_length)),
+            mode=self.mode,
+            value=self.value,
+        )
 
 
 class Squeeze(nn.Module):
@@ -50,7 +54,13 @@ class Mean(nn.Module):
 
 
 class ComposeAugmentation:
-    def __init__(self, pre_process_rule: Callable, post_process_rule: Callable, method='pick_one', to_tensor: bool = True):
+    def __init__(
+        self,
+        pre_process_rule: Callable,
+        post_process_rule: Callable,
+        method="pick_one",
+        to_tensor: bool = True,
+    ):
         self.pre_process = []
         self.process = []
         self.post_process = []
@@ -72,12 +82,12 @@ class ComposeAugmentation:
         self.pre_process = []
         self.post_process = []
 
-        if self.method == 'pick_one':
+        if self.method == "pick_one":
             tmp_transform = self._compose_pick_one()
             return tmp_transform(x)
 
         else:
-            raise ValueError(f'Methods {self.method} doesn\'t exist.')
+            raise ValueError(f"Methods {self.method} doesn't exist.")
 
     def _compose_pick_one(self) -> nn.Sequential:
         """Select only one augmentation randomly."""

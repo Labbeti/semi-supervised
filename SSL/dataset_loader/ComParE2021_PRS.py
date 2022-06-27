@@ -8,7 +8,13 @@ from tqdm import tqdm
 from torch.nn import Module
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler, Sampler
-from SSL.util.utils import cache_to_disk, ZipCycleInfinite, Cacher, cache_to_disk, cache_feature
+from SSL.util.utils import (
+    cache_to_disk,
+    ZipCycleInfinite,
+    Cacher,
+    cache_to_disk,
+    cache_feature,
+)
 from SSL.dataset.ComParE2021_PRS import COMPARE2021_PRS
 
 
@@ -35,15 +41,15 @@ class ComParE2021_PRS(COMPARE2021_PRS):
             return self.transform(x)
 
 
-@cache_to_disk(path='.ComParE2021_PRS')
-def class_balance_split(dataset,
-                        supervised_ratio: float = 0.1,
-                        unsupervised_ratio: float = None,
-                        batch_size: int = 64,
-                        verbose: bool = True,
-                        seed: int = 1234,
-                        ):
-
+@cache_to_disk(path=".ComParE2021_PRS")
+def class_balance_split(
+    dataset,
+    supervised_ratio: float = 0.1,
+    unsupervised_ratio: float = None,
+    batch_size: int = 64,
+    verbose: bool = True,
+    seed: int = 1234,
+):
     def to_one_hot(idx):
         one_hot = [0] * len(COMPARE2021_PRS.CLASSES)
         one_hot[idx] = 1
@@ -59,7 +65,10 @@ def class_balance_split(dataset,
         with tqdm(total=sum(expected)) as progress:
             for class_idx in range(nb_classes):
                 idx = 0
-                while idx < len(remaining_samples) and subset_occur[class_idx] < expected[class_idx]:
+                while (
+                    idx < len(remaining_samples)
+                    and subset_occur[class_idx] < expected[class_idx]
+                ):
                     if remaining_samples[idx][0][class_idx] == 1:
                         target, target_idx = remaining_samples.pop(idx)
                         subset_occur += target
@@ -80,14 +89,14 @@ def class_balance_split(dataset,
     if supervised_ratio == 1.0:
         return list(range(len(dataset))), []
 
-    all_targets = list(map(to_one_hot, dataset.subsets_info['target']))
+    all_targets = list(map(to_one_hot, dataset.subsets_info["target"]))
     all_target_idx = list(range(len(all_targets)))
 
     # expected occurance and tolerance
     total_occur = numpy.sum(all_targets, axis=0)
     s_expected_occur = numpy.ceil(total_occur * supervised_ratio)
     u_expected_occur = numpy.ceil(total_occur * unsupervised_ratio)
-    print(' s_expected_occur: ', s_expected_occur)
+    print(" s_expected_occur: ", s_expected_occur)
     print("s expected occur: ", sum(s_expected_occur))
 
     all_sample = list(zip(all_targets, all_target_idx))
@@ -98,13 +107,15 @@ def class_balance_split(dataset,
 
 
 class IterationBalancedSampler(Sampler):
-    def __init__(self, dataset: ComParE2021_PRS, index_list: list, shuffle: bool = True):
+    def __init__(
+        self, dataset: ComParE2021_PRS, index_list: list, shuffle: bool = True
+    ):
         super().__init__(None)
         self.dataset = dataset
         self.shuffle = shuffle
 
         self.index_list = index_list
-        self.all_targets = dataset.subsets_info['target']
+        self.all_targets = dataset.subsets_info["target"]
         self.sorted_sample_indexes = self._sort_per_class()
 
     def _sort_per_class(self):
@@ -113,7 +124,7 @@ class IterationBalancedSampler(Sampler):
         """
         nb_classes = len(COMPARE2021_PRS.CLASSES)
 
-        print('Sort the classes')
+        print("Sort the classes")
         class_indexes = [[] for _ in range(nb_classes)]
 
         for sample_idx, target in zip(self.index_list, self.all_targets):
@@ -175,33 +186,36 @@ class InfiniteSampler(Sampler):
             yield idx
 
 
-def supervised(dataset_root,
-               supervised_ratio: float = 0.1,
-               batch_size: int = 128,
-
-               train_transform: Module = None,
-               val_transform: Module = None,
-               augmentation: str = None,
-
-               num_workers: int = 5,
-               pin_memory: bool = False,
-               seed: int = 1234,
-
-               **kwargs) -> Tuple[DataLoader, DataLoader]:
+def supervised(
+    dataset_root,
+    supervised_ratio: float = 0.1,
+    batch_size: int = 128,
+    train_transform: Module = None,
+    val_transform: Module = None,
+    augmentation: str = None,
+    num_workers: int = 5,
+    pin_memory: bool = False,
+    seed: int = 1234,
+    **kwargs
+) -> Tuple[DataLoader, DataLoader]:
 
     use_cache = True
     if augmentation is not None:
         use_cache = False
-        print('Augmentation are used, disabling transform cache ...')
-        
+        print("Augmentation are used, disabling transform cache ...")
+
     loader_args = {
-        'num_workers': num_workers,
-        'pin_memory': pin_memory,
+        "num_workers": num_workers,
+        "pin_memory": pin_memory,
     }
 
     # Training subset
-    train_dataset = ComParE2021_PRS(root=dataset_root, subset='train', transform=train_transform, cache=use_cache)
-    s_idx, u_idx = class_balance_split(train_dataset, supervised_ratio, batch_size=batch_size, seed=seed)
+    train_dataset = ComParE2021_PRS(
+        root=dataset_root, subset="train", transform=train_transform, cache=use_cache
+    )
+    s_idx, u_idx = class_balance_split(
+        train_dataset, supervised_ratio, batch_size=batch_size, seed=seed
+    )
 
     s_batch_size = int(numpy.floor(batch_size * supervised_ratio))
     # u_batch_size = int(numpy.ceil(batch_size * (1 - supervised_ratio)))
@@ -210,67 +224,76 @@ def supervised(dataset_root,
     # sampler_u = InfiniteSampler(u_idx, shuffle=True)
 
     train_s_loader = DataLoader(
-        train_dataset, batch_size=s_batch_size, sampler=sampler_s, **loader_args)
+        train_dataset, batch_size=s_batch_size, sampler=sampler_s, **loader_args
+    )
     # train_u_loader = DataLoader(train_dataset, batch_size=u_batch_size, sampler=sampler_u, **loader_args)
 
     # train_loader = ZipCycleInfinite([train_s_loader, train_u_loader])
     train_loader = train_s_loader
 
     # validation subset
-    val_dataset = ComParE2021_PRS(root=dataset_root, subset='devel', transform=val_transform, cache=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, **loader_args)
+    val_dataset = ComParE2021_PRS(
+        root=dataset_root, subset="devel", transform=val_transform, cache=True
+    )
+    val_loader = DataLoader(
+        val_dataset, batch_size=batch_size, shuffle=False, **loader_args
+    )
 
     return None, train_loader, val_loader
 
 
 def mean_teacher(
-        dataset_root,
-        supervised_ratio: float = 0.1,
-        batch_size: int = 128,
-
-        train_transform: Module = None,
-        val_transform: Module = None,
-
-        num_workers: int = 5,
-        pin_memory: bool = False,
-        seed: int = 1234,
-
-        **kwargs) -> Tuple[DataLoader, DataLoader]:
+    dataset_root,
+    supervised_ratio: float = 0.1,
+    batch_size: int = 128,
+    train_transform: Module = None,
+    val_transform: Module = None,
+    num_workers: int = 5,
+    pin_memory: bool = False,
+    seed: int = 1234,
+    **kwargs
+) -> Tuple[DataLoader, DataLoader]:
 
     loader_args = {
-        'num_workers': num_workers,
-        'pin_memory': pin_memory,
+        "num_workers": num_workers,
+        "pin_memory": pin_memory,
     }
 
     # Training subset
     train_dataset = ComParE2021_PRS(
-        root=dataset_root, subset='train', transform=train_transform)
+        root=dataset_root, subset="train", transform=train_transform
+    )
     print(train_dataset.__getitem__)
     s_idx, u_idx = class_balance_split(
-        train_dataset, supervised_ratio, batch_size=batch_size, seed=seed)
+        train_dataset, supervised_ratio, batch_size=batch_size, seed=seed
+    )
 
     s_batch_size = int(numpy.floor(batch_size * supervised_ratio))
     u_batch_size = int(numpy.ceil(batch_size * (1 - supervised_ratio)))
 
-    print('s_idx: ', len(s_idx))
-    print('u_idx: ', len(u_idx))
+    print("s_idx: ", len(s_idx))
+    print("u_idx: ", len(u_idx))
 
     sampler_s = IterationBalancedSampler(train_dataset, s_idx, shuffle=True)
-#     sampler_s = SubsetRandomSampler(s_idx)
+    #     sampler_s = SubsetRandomSampler(s_idx)
     sampler_u = InfiniteSampler(u_idx, shuffle=True)
 
     train_s_loader = DataLoader(
-        train_dataset, batch_size=s_batch_size, sampler=sampler_s, **loader_args)
+        train_dataset, batch_size=s_batch_size, sampler=sampler_s, **loader_args
+    )
     train_u_loader = DataLoader(
-        train_dataset, batch_size=u_batch_size, sampler=sampler_u, **loader_args)
+        train_dataset, batch_size=u_batch_size, sampler=sampler_u, **loader_args
+    )
 
     train_loader = ZipCycleInfinite([train_s_loader, train_u_loader])
 
     # validation subset
     val_dataset = ComParE2021_PRS(
-        root=dataset_root, subset='devel', transform=val_transform)
+        root=dataset_root, subset="devel", transform=val_transform
+    )
     val_loader = DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=False, **loader_args)
+        val_dataset, batch_size=batch_size, shuffle=False, **loader_args
+    )
 
     return None, train_loader, val_loader
 

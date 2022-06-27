@@ -17,13 +17,17 @@ from metric_utils.metrics import CategoricalAccuracy, FScore, ContinueAverage
 
 
 class MeanTeacherTrainer(Trainer):
-    def __init__(self, model: str, dataset: str,
-                 ema_alpha: float = 0.999,
-                 teacher_noise_db: int = 0,
-                 warmup_length: int = 50,
-                 lambda_ccost_max: float = 1,
-                 use_softmax: bool = False,
-                 ccost_method: str = "mse"):
+    def __init__(
+        self,
+        model: str,
+        dataset: str,
+        ema_alpha: float = 0.999,
+        teacher_noise_db: int = 0,
+        warmup_length: int = 50,
+        lambda_ccost_max: float = 1,
+        use_softmax: bool = False,
+        ccost_method: str = "mse",
+    ):
         super().__init__(model, "mean-teacher", dataset)
         self.ema_alpha = ema_alpha
         self.teacher_noise_db = teacher_noise_db
@@ -53,10 +57,7 @@ class MeanTeacherTrainer(Trainer):
         empty_cache()
 
         model_func = load_model(self.dataset, self.model_str)
-        model_params = dict(
-            input_shape=self.input_shape,
-            num_classes=self.num_classes,
-        )
+        model_params = dict(input_shape=self.input_shape, num_classes=self.num_classes,)
 
         self.student = model_func(**model_params)
         self.teacher = model_func(**model_params)
@@ -68,17 +69,17 @@ class MeanTeacherTrainer(Trainer):
 
     def init_metrics(self, parameters: DotDict):
         self.metrics = DotDict(
-          fscore_ss=FScore(),
-          fscore_su=FScore(),
-          fscore_ts=FScore(),
-          fscore_tu=FScore(),
-          acc_ss=CategoricalAccuracy(),
-          acc_su=CategoricalAccuracy(),
-          acc_ts=CategoricalAccuracy(),
-          acc_tu=CategoricalAccuracy(),
-          avg_Sce=ContinueAverage(),
-          avg_Tce=ContinueAverage(),
-          avg_ccost=ContinueAverage(),
+            fscore_ss=FScore(),
+            fscore_su=FScore(),
+            fscore_ts=FScore(),
+            fscore_tu=FScore(),
+            acc_ss=CategoricalAccuracy(),
+            acc_su=CategoricalAccuracy(),
+            acc_ts=CategoricalAccuracy(),
+            acc_tu=CategoricalAccuracy(),
+            avg_Sce=ContinueAverage(),
+            avg_Tce=ContinueAverage(),
+            avg_ccost=ContinueAverage(),
         )
         self.maximum_tracker = track_maximum()
 
@@ -104,34 +105,49 @@ class MeanTeacherTrainer(Trainer):
             nb_epoch=parameters.nb_epoch,
         )
 
-        self.lambda_ccost = Warmup(self.lambda_ccost_max, self.warmup_length, sigmoid_rampup)
+        self.lambda_ccost = Warmup(
+            self.lambda_ccost_max, self.warmup_length, sigmoid_rampup
+        )
         self.callbacks += [self.lambda_ccost]
 
     def init_logs(self, parameters: DotDict):
         print("Prepare the log system")
         title_element = (
-            self.model_str, parameters.supervised_ratio,
-            get_datetime(), self.model_str,
-            self.ccost_method.upper(), self.use_softmax, self.teacher_noise_db
+            self.model_str,
+            parameters.supervised_ratio,
+            get_datetime(),
+            self.model_str,
+            self.ccost_method.upper(),
+            self.use_softmax,
+            self.teacher_noise_db,
         )
 
         tensorboard_title = "%s/%sS/%s_%s_%s_%s-softmax_%s-n" % title_element
 
-        self.tensorboard = mSummaryWriter(log_dir="%s/%s" % (self.tensorboard_path, tensorboard_title))
+        self.tensorboard = mSummaryWriter(
+            log_dir="%s/%s" % (self.tensorboard_path, tensorboard_title)
+        )
 
     def init_checkpoint(self, parameters: DotDict):
         print("Prepare the checkpoint system")
         title_element = (
-            self.model_str, parameters.supervised_ratio,
-            get_datetime(), self.model_str,
-            self.ccost_method.upper(), self.use_softmax, self.teacher_noise_db
+            self.model_str,
+            parameters.supervised_ratio,
+            get_datetime(),
+            self.model_str,
+            self.ccost_method.upper(),
+            self.use_softmax,
+            self.teacher_noise_db,
         )
 
         checkpoint_title = "%s/%sS/%s_%s_%s_%s-softmax_%s-n" % title_element
 
         self.checkpoint = CheckPoint(
-            [self.student, self.teacher], self.optimizer, mode="max",
-            name=f"{self.checkpoint_path}/{checkpoint_title}")
+            [self.student, self.teacher],
+            self.optimizer,
+            mode="max",
+            name=f"{self.checkpoint_path}/{checkpoint_title}",
+        )
 
     def init_loss(self, parameters: DotDict):
         self.loss_ce = nn.CrossEntropyLoss(reduction="mean")
@@ -149,8 +165,26 @@ class MeanTeacherTrainer(Trainer):
         RESET_SEQ = "\033[0m"
 
         header_form = "{:<8.8} {:<6.6} - {:<6.6} - {:<10.8} {:<8.6} {:<8.6} {:<8.6} {:<8.6} {:<8.6} {:<8.6} | {:<10.8} {:<8.6} {:<8.6} {:<8.6} {:<8.6} {:<8.6} - {:<8.6}"
-        value_form  = "{:<8.8} {:<6d} - {:<6d} - {:<10.8} {:<8.4f} {:<8.4f} {:<8.4f} {:<8.4f} {:<8.4f} {:<8.4f} | {:<10.8} {:<8.4f} {:<8.4f} {:<8.4f} {:<8.4f} {:<8.4f} - {:<8.4f}"
-        self.header = header_form.format(".               ", "Epoch",  "%", "Student:", "ce", "ccost", "acc_s", "f1_s", "acc_u", "f1_u", "Teacher:", "ce", "acc_s", "f1_s", "acc_u", "f1_u" , "Time")
+        value_form = "{:<8.8} {:<6d} - {:<6d} - {:<10.8} {:<8.4f} {:<8.4f} {:<8.4f} {:<8.4f} {:<8.4f} {:<8.4f} | {:<10.8} {:<8.4f} {:<8.4f} {:<8.4f} {:<8.4f} {:<8.4f} - {:<8.4f}"
+        self.header = header_form.format(
+            ".               ",
+            "Epoch",
+            "%",
+            "Student:",
+            "ce",
+            "ccost",
+            "acc_s",
+            "f1_s",
+            "acc_u",
+            "f1_u",
+            "Teacher:",
+            "ce",
+            "acc_s",
+            "f1_s",
+            "acc_u",
+            "f1_u",
+            "Time",
+        )
 
         self.train_form = value_form
         self.val_form = UNDERLINE_SEQ + value_form + RESET_SEQ
@@ -189,8 +223,7 @@ class MeanTeacherTrainer(Trainer):
                 student_logits = torch.cat((ss_logits, su_logits), dim=0)
                 teacher_logits = torch.cat((ts_logits, tu_logits), dim=0)
                 ccost = self.loss_cc(
-                    self.softmax_fn(student_logits),
-                    self.softmax_fn(teacher_logits),
+                    self.softmax_fn(student_logits), self.softmax_fn(teacher_logits),
                 )
 
                 total_loss = loss + self.lambda_ccost() * ccost
@@ -205,13 +238,11 @@ class MeanTeacherTrainer(Trainer):
                 _teacher_loss = self.loss_ce(ts_logits, y_s)
 
                 # Update teacher
-                self._update_teacher_model(epoch*nb_batch + i)
+                self._update_teacher_model(epoch * nb_batch + i)
 
                 # Compute the metrics for the student
                 fscores, accs = self._calc_metrics(
-                    ss_logits, su_logits,
-                    ts_logits, tu_logits,
-                    y_s, y_u,
+                    ss_logits, su_logits, ts_logits, tu_logits, y_s, y_u,
                 )
 
                 # Running average of the two losses
@@ -220,14 +251,28 @@ class MeanTeacherTrainer(Trainer):
                 running_ccost = M.avg_ccost(ccost.item()).mean
 
                 # logs
-                print(self.train_form.format(
-                    "Training: ", epoch + 1, int(100 * (i + 1) / nb_batch),
-                    "", student_running_loss, running_ccost,
-                    accs.ss, fscores.ss, accs.su, fscores.su,
-                    "", teacher_running_loss,
-                    accs.ts, fscores.ts, accs.tu, fscores.tu,
-                    time.time() - start_time
-                ), end="\r")
+                print(
+                    self.train_form.format(
+                        "Training: ",
+                        epoch + 1,
+                        int(100 * (i + 1) / nb_batch),
+                        "",
+                        student_running_loss,
+                        running_ccost,
+                        accs.ss,
+                        fscores.ss,
+                        accs.su,
+                        fscores.su,
+                        "",
+                        teacher_running_loss,
+                        accs.ts,
+                        fscores.ts,
+                        accs.tu,
+                        fscores.tu,
+                        time.time() - start_time,
+                    ),
+                    end="\r",
+                )
 
         T("train/student_acc_s", accs.ss, epoch)
         T("train/student_acc_u", accs.su, epoch)
@@ -269,14 +314,12 @@ class MeanTeacherTrainer(Trainer):
                     loss = self.loss_ce(student_logits, y)
                     _teacher_loss = self.loss_ce(teacher_logits, y)  # for metrics only
                     ccost = self.loss_cc(
-                        self.softmax_fn(student_logits),
-                        self.softmax_fn(teacher_logits))
+                        self.softmax_fn(student_logits), self.softmax_fn(teacher_logits)
+                    )
 
                 # Compute the metrics
                 fscores, accs = self._calc_metrics(
-                    student_logits, student_logits, 
-                    teacher_logits, teacher_logits,
-                    y, y
+                    student_logits, student_logits, teacher_logits, teacher_logits, y, y
                 )
 
                 # Running average of the two losses
@@ -285,12 +328,28 @@ class MeanTeacherTrainer(Trainer):
                 running_ccost = M.avg_ccost(ccost.item()).mean
 
                 # logs
-                print(self.val_form.format(
-                    "Validation: ", epoch + 1, int(100 * (i + 1) / nb_batch),
-                    "", student_running_loss, running_ccost, accs.ss, fscores.ss, 0.0, 0.0,
-                    "", teacher_running_loss, accs.ts, fscores.ts, 0.0, 0.0,
-                    time.time() - start_time
-                ), end="\r")
+                print(
+                    self.val_form.format(
+                        "Validation: ",
+                        epoch + 1,
+                        int(100 * (i + 1) / nb_batch),
+                        "",
+                        student_running_loss,
+                        running_ccost,
+                        accs.ss,
+                        fscores.ss,
+                        0.0,
+                        0.0,
+                        "",
+                        teacher_running_loss,
+                        accs.ts,
+                        fscores.ts,
+                        0.0,
+                        0.0,
+                        time.time() - start_time,
+                    ),
+                    end="\r",
+                )
 
         self.checkpoint.step(accs.ss)
         for c in self.callbacks:
@@ -320,8 +379,10 @@ class MeanTeacherTrainer(Trainer):
         # Use the true average until the exponential average is more correct
         alpha = min(1 - 1 / (epoch + 1), self.ema_alpha)
 
-        for param, ema_param in zip(self.student.parameters(), self.teacher.parameters()):
-            ema_param.data.mul_(alpha).add_(param.data, alpha=1-alpha)
+        for param, ema_param in zip(
+            self.student.parameters(), self.teacher.parameters()
+        ):
+            ema_param.data.mul_(alpha).add_(param.data, alpha=1 - alpha)
 
     def _noise_fn(self, x):
         if self.teacher_noise_db == 0:
@@ -330,9 +391,9 @@ class MeanTeacherTrainer(Trainer):
         n_db = self.teacher_noise_db
         return x + (torch.rand(x.shape).cuda() * n_db + n_db)
 
-    def _calc_metrics(self,
-                  ss_logits, su_logits, ts_logits, tu_logits,
-                  y_s, y_u) -> Union[DotDict, DotDict]:
+    def _calc_metrics(
+        self, ss_logits, su_logits, ts_logits, tu_logits, y_s, y_u
+    ) -> Union[DotDict, DotDict]:
 
         with torch.set_grad_enabled(False):
             S = nn.Softmax(dim=1)

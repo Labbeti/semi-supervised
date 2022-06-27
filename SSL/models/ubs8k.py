@@ -15,22 +15,41 @@ from SSL.models.audioset import (
     MobileNetV2,
 )
 
+
 class cnn(nn.Module):
     def __init__(self, **kwargs):
         nn.Module.__init__(self)
 
         self.features = nn.Sequential(
-            ConvPoolReLU(1, 32, 3, 1, 1, pool_kernel_size=(4, 2), pool_stride=(4, 2), dropout=0.0),
-            ConvPoolReLU(32, 32, 3, 1, 1, pool_kernel_size=(4, 2), pool_stride=(4, 2), dropout=0.3),
-            ConvPoolReLU(32, 32, 3, 1, 1, pool_kernel_size=(4, 2), pool_stride=(4, 2), dropout=0.3),
+            ConvPoolReLU(
+                1, 32, 3, 1, 1, pool_kernel_size=(4, 2), pool_stride=(4, 2), dropout=0.0
+            ),
+            ConvPoolReLU(
+                32,
+                32,
+                3,
+                1,
+                1,
+                pool_kernel_size=(4, 2),
+                pool_stride=(4, 2),
+                dropout=0.3,
+            ),
+            ConvPoolReLU(
+                32,
+                32,
+                3,
+                1,
+                1,
+                pool_kernel_size=(4, 2),
+                pool_stride=(4, 2),
+                dropout=0.3,
+            ),
             nn.Conv2d(32, 32, 1, 1, 0),
             nn.ReLU6(),
         )
 
         self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Dropout(0.5),
-            nn.Linear(1696, 10) # TODO fill
+            nn.Flatten(), nn.Dropout(0.5), nn.Linear(1696, 10)  # TODO fill
         )
 
     def forward(self, x):
@@ -76,6 +95,7 @@ class cnn_advBN(nn.Module):
     Basic CNN model with adversarial dedicated Batch Normalization
 
     """
+
     def __init__(self, *kwargs):
         super(cnn_advBN, self).__init__()
 
@@ -102,7 +122,6 @@ class cnn_advBN(nn.Module):
         x = self.classifier(x)
 
         return x
-
 
 
 import torchvision.models as torch_models
@@ -136,7 +155,7 @@ def resnet18(**kwargs):
 class mWideResnet(ResNet):
     def forward(self, x):
         x = x.view(-1, 1, *x.shape[1:])
-#         x = x.repeat(1, 3, 1, 1)
+        #         x = x.repeat(1, 3, 1, 1)
 
         return self._forward_impl(x)
 

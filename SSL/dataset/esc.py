@@ -42,13 +42,16 @@ class ESC50(Dataset):
             and puts it in root directory. If datasets is already downloaded, it is
             not downloaded again.
     """
+
     NB_CLASS = 50
 
-    def __init__(self,
-                 root: str,
-                 folds: tuple = FOLDS,
-                 download: bool = False,
-                 transform: Module = None) -> None:
+    def __init__(
+        self,
+        root: str,
+        folds: tuple = FOLDS,
+        download: bool = False,
+        transform: Module = None,
+    ) -> None:
 
         super().__init__()
 
@@ -162,11 +165,13 @@ class ESC50(Dataset):
 class ESC10(ESC50):
     TARGET_MAPPER = {0: 0, 1: 1, 38: 2, 40: 3, 41: 4, 10: 5, 11: 6, 12: 7, 20: 8, 21: 9}
 
-    def __init__(self,
-                 root: str,
-                 folds: tuple = FOLDS,
-                 download: bool = False,
-                 transform: Module = None) -> None:
+    def __init__(
+        self,
+        root: str,
+        folds: tuple = FOLDS,
+        download: bool = False,
+        transform: Module = None,
+    ) -> None:
         super().__init__(root, folds, download, transform)
 
         self.url = URL["esc-10"]

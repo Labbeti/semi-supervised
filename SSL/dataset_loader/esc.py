@@ -8,6 +8,7 @@ import torch.utils.data as torch_data
 from torch.utils.data.sampler import SubsetRandomSampler
 
 import sys
+
 sys.path.append("../../PyTorch/audio/torchaudio")
 from SSL.dataset.esc import ESC10, ESC50
 
@@ -68,14 +69,15 @@ class ESC50_NoSR(ESC50):
 #       DEEP CO-TRAINING
 # =============================================================================
 def dct(
-        dataset_root,
-        supervised_ratio: float = 0.1,
-        batch_size: int = 100,
-        train_folds: tuple = (1, 2, 3, 4),
-        val_folds: tuple = (5, ),
-        train_transform: Module = None,
-        val_transform: Module = None,
-        **kwargs) -> Tuple[DataLoader, DataLoader]:
+    dataset_root,
+    supervised_ratio: float = 0.1,
+    batch_size: int = 100,
+    train_folds: tuple = (1, 2, 3, 4),
+    val_folds: tuple = (5,),
+    train_transform: Module = None,
+    val_transform: Module = None,
+    **kwargs
+) -> Tuple[DataLoader, DataLoader]:
     return load_dct_helper(ESC10_NoSR, **locals())
 
 
@@ -92,35 +94,41 @@ def dct(
 
 
 def load_dct_helper(
-        dataset_class: Union[ESC10, ESC50],
-        dataset_root,
-        supervised_ratio: float = 0.1,
-        batch_size: int = 100,
-        train_folds: tuple = (1, 2, 3, 4),
-        val_folds: tuple = (5, ),
-        train_transform: Module = None,
-        val_transform: Module = None,
-        **kwargs) -> Tuple[DataLoader, DataLoader]:
+    dataset_class: Union[ESC10, ESC50],
+    dataset_root,
+    supervised_ratio: float = 0.1,
+    batch_size: int = 100,
+    train_folds: tuple = (1, 2, 3, 4),
+    val_folds: tuple = (5,),
+    train_transform: Module = None,
+    val_transform: Module = None,
+    **kwargs
+) -> Tuple[DataLoader, DataLoader]:
 
     # Recover extra commun arguments
     num_workers = kwargs.get("num_workers", 0)
     pin_memory = kwargs.get("pin_memory", False)
-    loader_args = dict(
-        num_workers=num_workers,
-        pin_memory=pin_memory,
-    )
-    
+    loader_args = dict(num_workers=num_workers, pin_memory=pin_memory,)
+
     dataset_path = os.path.join(dataset_root)
 
     # validation subset
     print(val_folds)
-    val_dataset = dataset_class(root=dataset_path, folds=val_folds, download=True, transform=val_transform)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, **loader_args)
+    val_dataset = dataset_class(
+        root=dataset_path, folds=val_folds, download=True, transform=val_transform
+    )
+    val_loader = DataLoader(
+        val_dataset, batch_size=batch_size, shuffle=True, **loader_args
+    )
 
     # training subset
-    train_dataset = dataset_class(root=dataset_path, folds=train_folds, download=True, transform=train_transform)
+    train_dataset = dataset_class(
+        root=dataset_path, folds=train_folds, download=True, transform=train_transform
+    )
 
-    s_idx, u_idx = _split_s_u(train_dataset, supervised_ratio, nb_class=train_dataset.nb_class)
+    s_idx, u_idx = _split_s_u(
+        train_dataset, supervised_ratio, nb_class=train_dataset.nb_class
+    )
 
     # Calc the size of the Supervised and Unsupervised batch
     nb_s_file = len(s_idx)
@@ -132,9 +140,15 @@ def load_dct_helper(
     sampler_s = SubsetRandomSampler(s_idx)
     sampler_u = SubsetRandomSampler(u_idx)
 
-    train_loader_s1 = DataLoader(train_dataset, batch_size=s_batch_size, sampler=sampler_s, **loader_args)
-    train_loader_s2 = DataLoader(train_dataset, batch_size=s_batch_size, sampler=sampler_s, **loader_args)
-    train_loader_u = DataLoader(train_dataset, batch_size=u_batch_size, sampler=sampler_u, **loader_args)
+    train_loader_s1 = DataLoader(
+        train_dataset, batch_size=s_batch_size, sampler=sampler_s, **loader_args
+    )
+    train_loader_s2 = DataLoader(
+        train_dataset, batch_size=s_batch_size, sampler=sampler_s, **loader_args
+    )
+    train_loader_u = DataLoader(
+        train_dataset, batch_size=u_batch_size, sampler=sampler_u, **loader_args
+    )
 
     # combine the three loader into one
     train_loader = ZipCycle([train_loader_s1, train_loader_s2, train_loader_u])
@@ -146,14 +160,15 @@ def load_dct_helper(
 #       DEEP CO-TRAINING
 # =============================================================================
 def dct_uniloss(
-        dataset_root,
-        supervised_ratio: float = 0.1,
-        batch_size: int = 100,
-        train_folds: tuple = (1, 2, 3, 4),
-        val_folds: tuple = (5, ),
-        train_transform: Module = None,
-        val_transform: Module = None,
-        **kwargs) -> Tuple[DataLoader, DataLoader]:
+    dataset_root,
+    supervised_ratio: float = 0.1,
+    batch_size: int = 100,
+    train_folds: tuple = (1, 2, 3, 4),
+    val_folds: tuple = (5,),
+    train_transform: Module = None,
+    val_transform: Module = None,
+    **kwargs
+) -> Tuple[DataLoader, DataLoader]:
     return load_dct_helper(ESC10_NoSR, **locals())
 
 
@@ -161,15 +176,22 @@ def dct_uniloss(
 #        SUPERVISED DATASETS
 # =============================================================================
 def supervised(
+    dataset_root,
+    supervised_ratio: float = 1.0,
+    batch_size: int = 128,
+    train_folds: tuple = (1, 2, 3, 4),
+    val_folds: tuple = (5,),
+    **kwargs
+) -> Tuple[DataLoader, DataLoader]:
+    return _load_supervised_helper(
+        ESC10_NoSR,
         dataset_root,
-        supervised_ratio: float = 1.0,
-        batch_size: int = 128,
-        train_folds: tuple = (1, 2, 3, 4),
-        val_folds: tuple = (5, ),
-        **kwargs) -> Tuple[DataLoader, DataLoader]:
-    return _load_supervised_helper(ESC10_NoSR, dataset_root, supervised_ratio,
-                                   batch_size, train_folds, val_folds,
-                                   **kwargs)
+        supervised_ratio,
+        batch_size,
+        train_folds,
+        val_folds,
+        **kwargs
+    )
 
 
 # def esc50_supervised(
@@ -185,45 +207,53 @@ def supervised(
 
 
 def _load_supervised_helper(
-        dataset_class: Union[ESC10, ESC50],
-        dataset_root,
-    
-        supervised_ratio: float = 1.0,
-        batch_size: int = 128,
-        train_folds: tuple = (1, 2, 3, 4),
-        val_folds: tuple = (5, ),
-    
-        train_transform: Module = None,
-        val_transform: Module = None,
-        **kwargs) -> Tuple[DataLoader, DataLoader]:
+    dataset_class: Union[ESC10, ESC50],
+    dataset_root,
+    supervised_ratio: float = 1.0,
+    batch_size: int = 128,
+    train_folds: tuple = (1, 2, 3, 4),
+    val_folds: tuple = (5,),
+    train_transform: Module = None,
+    val_transform: Module = None,
+    **kwargs
+) -> Tuple[DataLoader, DataLoader]:
     """
     Load the cifar10 dataset for Deep Co Training system.
     """
     # Recover extra commun arguments
     num_workers = kwargs.get("num_workers", 0)
     pin_memory = kwargs.get("pin_memory", False)
-    loader_args = dict(
-        num_workers=num_workers,
-        pin_memory=pin_memory,
-    )
-    
+    loader_args = dict(num_workers=num_workers, pin_memory=pin_memory,)
+
     dataset_path = os.path.join(dataset_root)
 
     # validation subset
-    val_dataset = dataset_class(root=dataset_path, folds=val_folds, download=True, transform=val_transform)
-    val_loader = torch_data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True, **loader_args)
+    val_dataset = dataset_class(
+        root=dataset_path, folds=val_folds, download=True, transform=val_transform
+    )
+    val_loader = torch_data.DataLoader(
+        val_dataset, batch_size=batch_size, shuffle=True, **loader_args
+    )
 
     # Training subset
-    train_dataset = dataset_class(root=dataset_path, folds=train_folds, download=True, transform=train_transform)
+    train_dataset = dataset_class(
+        root=dataset_path, folds=train_folds, download=True, transform=train_transform
+    )
 
     if supervised_ratio == 1.0:
-        train_loader = torch_data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, **loader_args)
+        train_loader = torch_data.DataLoader(
+            train_dataset, batch_size=batch_size, shuffle=True, **loader_args
+        )
 
     else:
-        s_idx, u_idx = _split_s_u(train_dataset, supervised_ratio, nb_class=train_dataset.nb_class)
+        s_idx, u_idx = _split_s_u(
+            train_dataset, supervised_ratio, nb_class=train_dataset.nb_class
+        )
 
         sampler_s = torch_data.SubsetRandomSampler(s_idx)
-        train_loader = torch_data.DataLoader(train_dataset, batch_size=batch_size, sampler=sampler_s, **loader_args)
+        train_loader = torch_data.DataLoader(
+            train_dataset, batch_size=batch_size, sampler=sampler_s, **loader_args
+        )
 
     return None, train_loader, val_loader
 
@@ -232,15 +262,22 @@ def _load_supervised_helper(
 #        MEAN TEACHER
 # =============================================================================
 def mean_teacher(
+    dataset_root,
+    supervised_ratio: float = 0.1,
+    batch_size: int = 128,
+    train_folds: tuple = (1, 2, 3, 4),
+    val_folds: tuple = (5,),
+    **kwargs
+) -> Tuple[DataLoader, DataLoader]:
+    return _mean_teacher_helper(
+        ESC10_NoSR,
         dataset_root,
-        supervised_ratio: float = 0.1,
-        batch_size: int = 128,
-        train_folds: tuple = (1, 2, 3, 4),
-        val_folds: tuple = (5, ),
-        **kwargs) -> Tuple[DataLoader, DataLoader]:
-    return _mean_teacher_helper(ESC10_NoSR, dataset_root, supervised_ratio,
-                                   batch_size, train_folds, val_folds,
-                                   **kwargs)
+        supervised_ratio,
+        batch_size,
+        train_folds,
+        val_folds,
+        **kwargs
+    )
 
 
 # def mean_teacher(
@@ -256,37 +293,41 @@ def mean_teacher(
 
 
 def _mean_teacher_helper(
-        dataset_class: Union[ESC10, ESC50],
-        dataset_root,
-        supervised_ratio: float = 0.1,
-        batch_size: int = 128,
-        train_folds: tuple = (1, 2, 3, 4),
-        val_folds: tuple = (5, ),
-        
-        train_transform: Module = None,
-        val_transform: Module = None,
-
-        **kwargs) -> Tuple[None, DataLoader, DataLoader]:
+    dataset_class: Union[ESC10, ESC50],
+    dataset_root,
+    supervised_ratio: float = 0.1,
+    batch_size: int = 128,
+    train_folds: tuple = (1, 2, 3, 4),
+    val_folds: tuple = (5,),
+    train_transform: Module = None,
+    val_transform: Module = None,
+    **kwargs
+) -> Tuple[None, DataLoader, DataLoader]:
     """
     Load the cifar10 dataset for Deep Co Training system.
     """
     # Recover extra commun arguments
     num_workers = kwargs.get("num_workers", 0)
     pin_memory = kwargs.get("pin_memory", False)
-    loader_args = dict(
-        num_workers=num_workers,
-        pin_memory=pin_memory,
-    )
-    
+    loader_args = dict(num_workers=num_workers, pin_memory=pin_memory,)
+
     dataset_path = os.path.join(dataset_root)
 
     # validation subset
-    val_dataset = dataset_class(root=dataset_path, folds=val_folds, download=True, transform=val_transform)
-    val_loader = torch_data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True, **loader_args)
+    val_dataset = dataset_class(
+        root=dataset_path, folds=val_folds, download=True, transform=val_transform
+    )
+    val_loader = torch_data.DataLoader(
+        val_dataset, batch_size=batch_size, shuffle=True, **loader_args
+    )
 
     # Training subset
-    train_dataset = dataset_class(root=dataset_path, folds=train_folds, download=True, transform=train_transform)
-    s_idx, u_idx = _split_s_u(train_dataset, supervised_ratio, nb_class=train_dataset.nb_class)
+    train_dataset = dataset_class(
+        root=dataset_path, folds=train_folds, download=True, transform=train_transform
+    )
+    s_idx, u_idx = _split_s_u(
+        train_dataset, supervised_ratio, nb_class=train_dataset.nb_class
+    )
     nb_s_file = len(s_idx)
     nb_u_file = len(u_idx)
     s_batch_size = int(np.floor(batch_size * supervised_ratio))
@@ -297,13 +338,16 @@ def _mean_teacher_helper(
     sampler_s = torch_data.SubsetRandomSampler(s_idx)
     sampler_u = torch_data.SubsetRandomSampler(u_idx)
 
-    train_s_loader = torch_data.DataLoader(train_dataset, batch_size=s_batch_size, sampler=sampler_s)
-    train_u_loader = torch_data.DataLoader(train_dataset, batch_size=u_batch_size, sampler=sampler_u)
+    train_s_loader = torch_data.DataLoader(
+        train_dataset, batch_size=s_batch_size, sampler=sampler_s
+    )
+    train_u_loader = torch_data.DataLoader(
+        train_dataset, batch_size=u_batch_size, sampler=sampler_u
+    )
 
     train_loader = ZipCycle([train_s_loader, train_u_loader])
 
     return None, train_loader, val_loader
-
 
 
 # =============================================================================

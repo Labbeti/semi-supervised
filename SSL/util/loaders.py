@@ -5,9 +5,9 @@ def build_mapper(modules: dict) -> dict:
         dataset_mapper[dataset_name] = {
             "supervised": dataset_module.supervised,
             "dct": dataset_module.dct,
-#             "dct_uniloss": dataset_module.dct_uniloss,
+            #             "dct_uniloss": dataset_module.dct_uniloss,
             "mean-teacher": dataset_module.mean_teacher,
-            'fixmatch': dataset_module.fixmatch,
+            "fixmatch": dataset_module.fixmatch,
         }
 
     return dataset_mapper
@@ -21,9 +21,17 @@ def load_callbacks(dataset: str, framework: str, **kwargs):
     import SSL.callbacks.ComParE2021_PRS as c
 
     # get the corresping function mapper
-    dataset_mapper = build_mapper({"esc10": e, "esc50": e, "ubs8k": u, "speechcommand": s,
-                                   "audioset-balanced": a, "audioset-unbalanced": a,
-                                  'compare2021-prs': c})
+    dataset_mapper = build_mapper(
+        {
+            "esc10": e,
+            "esc50": e,
+            "ubs8k": u,
+            "speechcommand": s,
+            "audioset-balanced": a,
+            "audioset-unbalanced": a,
+            "compare2021-prs": c,
+        }
+    )
 
     return load_helper(dataset, framework, dataset_mapper, **kwargs)
 
@@ -35,9 +43,17 @@ def load_optimizer(dataset: str, framework: str, **kwargs):
     import SSL.optimizer.audioset as a
     import SSL.optimizer.ComParE2021_PRS as c
 
-    dataset_mapper = build_mapper({"esc10": e, "esc50": e, "ubs8k": u, "speechcommand": s,
-                                   "audioset-balanced": a, "audioset-unbalanced": a,
-                                  'compare2021-prs': c})
+    dataset_mapper = build_mapper(
+        {
+            "esc10": e,
+            "esc50": e,
+            "ubs8k": u,
+            "speechcommand": s,
+            "audioset-balanced": a,
+            "audioset-unbalanced": a,
+            "compare2021-prs": c,
+        }
+    )
 
     return load_helper(dataset, framework, dataset_mapper, **kwargs)
 
@@ -49,9 +65,17 @@ def load_preprocesser(dataset: str, framework: str, **kwargs):
     import SSL.preprocessing.audioset as a
     import SSL.preprocessing.ComParE2021_PRS as c
 
-    dataset_mapper = build_mapper({"esc10": e, "esc50": e, "ubs8k": u, "speechcommand": s,
-                                   "audioset-balanced": a, "audioset-unbalanced": a,
-                                  'compare2021-prs': c})
+    dataset_mapper = build_mapper(
+        {
+            "esc10": e,
+            "esc50": e,
+            "ubs8k": u,
+            "speechcommand": s,
+            "audioset-balanced": a,
+            "audioset-unbalanced": a,
+            "compare2021-prs": c,
+        }
+    )
 
     return load_helper(dataset, framework, dataset_mapper, **kwargs)
 
@@ -69,9 +93,16 @@ def load_dataset(dataset: str, framework: str, **kwargs):
         dataset = "audioset-unbalanced"
 
     dataset_mapper = build_mapper(
-        {"esc10": e, "esc50": e, "ubs8k": u, "speechcommand": s,
-         "audioset-balanced": a_bal, "audioset-unbalanced": a_unbal,
-         'compare2021-prs': c})
+        {
+            "esc10": e,
+            "esc50": e,
+            "ubs8k": u,
+            "speechcommand": s,
+            "audioset-balanced": a_bal,
+            "audioset-unbalanced": a_unbal,
+            "compare2021-prs": c,
+        }
+    )
 
     return load_helper(dataset, framework, dataset_mapper, **kwargs)
 
@@ -82,11 +113,15 @@ def load_helper(dataset: str, framework: str, mapper: dict, **kwargs):
 
     if _dataset not in mapper.keys():
         available_dataset = "{" + " | ".join(list(mapper.keys())) + "}"
-        raise ValueError(f"dataset {_dataset} is not available. Available dataset are: {available_dataset}")
+        raise ValueError(
+            f"dataset {_dataset} is not available. Available dataset are: {available_dataset}"
+        )
 
     if _framework not in mapper[_dataset].keys():
         available_framework = "{" + " | ".join(list(mapper[_dataset].keys()))
-        raise ValueError(f"framework {_framework} is not available. Available framework are: {available_framework}")
+        raise ValueError(
+            f"framework {_framework} is not available. Available framework are: {available_framework}"
+        )
 
-    print(f'loading dataset: {_framework} | {_dataset}')
+    print(f"loading dataset: {_framework} | {_dataset}")
     return mapper[_dataset][_framework](**kwargs)

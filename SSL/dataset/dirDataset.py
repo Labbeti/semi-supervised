@@ -6,6 +6,7 @@ from torch import Tensor
 from torch.nn import Module
 from torch.utils.data import Dataset
 
+
 class DirDataset(Dataset):
     def __init__(self, path: str, transform: Module = None) -> None:
         super().__init__()
@@ -27,4 +28,3 @@ class DirDataset(Dataset):
 
     def __len__(self) -> int:
         return len(self.filenames)
-
