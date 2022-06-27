@@ -54,3 +54,5 @@ path:
   tensorboard_root: ../../tensorboard
   checkpoint_path: ${path.checkpoint_root}/${dataset.dataset}/mean-teacher
   tensorboard_path: ${path.tensorboard_root}/${dataset.dataset}/mean-teacher
+
+tag: ""

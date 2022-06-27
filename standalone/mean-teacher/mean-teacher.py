@@ -129,6 +129,8 @@ def run(cfg: DictConfig) -> None:
             sufix_title += "-label"
         sufix_title += f"-{cfg.mixup.alpha}-a"
 
+    sufix_title += cfg.tag
+
     # -------- Tensorboard logging --------
     tensorboard_title = f"{get_datetime()}_{cfg.model.model}_{sufix_title}"
     log_dir = f"{cfg.path.tensorboard_path}/{tensorboard_title}"
