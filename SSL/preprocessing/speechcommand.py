@@ -1,13 +1,19 @@
-from typing import Tuple
-from torch.nn import Module
-from torch.nn import Sequential
-from SSL.util.transforms import PadUpTo, Squeeze
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from typing import Optional, Tuple
+
+import hydra
+
+from omegaconf import ListConfig
+from torch.nn import Module, Sequential
 from torchaudio.transforms import MelSpectrogram, AmplitudeToDB
-from SSL.util.augments import create_composer, augmentation_factory
 
-aug_pool = augmentation_factory("weak", ratio=0.5, sr=16000)
+from SSL.util.compose import compose_augment
+from SSL.util.transforms import PadUpTo, Squeeze
 
-spec_transforms = Sequential(
+
+transform_to_spec = Sequential(
     PadUpTo(target_length=16000, mode="constant", value=0),
     MelSpectrogram(sample_rate=16000, n_fft=2048, hop_length=512, n_mels=64),
     AmplitudeToDB(),
@@ -15,28 +21,37 @@ spec_transforms = Sequential(
 )
 
 
-def supervised(use_augmentation: bool = False) -> Tuple[Module, Module]:
-    train_transform = create_composer(use_augmentation, aug_pool, spec_transforms)
-    val_transform = create_composer(False, aug_pool, spec_transforms)
+def supervised(aug_cfg: Optional[ListConfig] = None) -> Tuple[Module, Module]:
+    if aug_cfg is not None:
+        train_pool = []
+        for aug_i_cfg in aug_cfg:
+            type_and_aug = {
+                "type": aug_i_cfg["type"],
+                "aug": hydra.utils.instantiate(aug_i_cfg["aug"]),
+            }
+            train_pool.append(type_and_aug)
+    else:
+        train_pool = []
+    train_transform = compose_augment(train_pool, transform_to_spec, None, None)
+    val_transform = transform_to_spec
+    return train_transform, val_transform  # type: ignore
 
-    return train_transform, val_transform
+
+def dct(aug_cfg: Optional[ListConfig] = None) -> Tuple[Module, Module]:
+    return supervised(aug_cfg)
 
 
-def dct(use_augmentation: bool = False) -> Tuple[Module, Module]:
-    return supervised(use_augmentation)
+def dct_uniloss(aug_cfg: Optional[ListConfig] = None) -> Tuple[Module, Module]:
+    return supervised(aug_cfg)
 
 
-def dct_uniloss(use_augmentation: bool = False) -> Tuple[Module, Module]:
-    return supervised(use_augmentation)
-
-
-def dct_aug4adv(use_augmentation: bool = False) -> Tuple[Module, Module]:
+def dct_aug4adv(aug_cfg: Optional[ListConfig] = None) -> Tuple[Module, Module]:
     raise NotImplementedError
 
 
-def mean_teacher(use_augmentation: bool = False) -> Tuple[Module, Module]:
-    return supervised(use_augmentation)
+def mean_teacher(aug_cfg: Optional[ListConfig] = None) -> Tuple[Module, Module]:
+    return supervised(aug_cfg)
 
 
-def fixmatch(use_augmentation: bool = False) -> Tuple[Module, Module]:
-    return supervised(use_augmentation)
+def fixmatch(aug_cfg: Optional[ListConfig] = None) -> Tuple[Module, Module]:
+    return supervised(aug_cfg)

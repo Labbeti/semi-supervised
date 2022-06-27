@@ -1,11 +1,15 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from typing import Tuple
+
 import torch
 
-from torch import Tensor
+from torch import nn, Tensor
 from torch.distributions.beta import Beta
-from torch.nn import Module
 
 
-class MixUp(Module):
+class MixUp(nn.Module):
     """
         Module MixUp that mix batch and labels with a parameter lambda sample from a beta distribution.
 
@@ -33,8 +37,8 @@ class MixUp(Module):
             :param apply_max: If True, apply the "lambda = max(lambda, 1 - lambda)" after the sampling of lambda. (default: False)
                 This operation is useful for having a mixed batch near to the first batch passed as input.
                 It was set to True in MixMatch training but not in original MixUp training.
-            :param mix_labels: If True, the labels of the two batches are mix using the same lambda, If False, the label of 
-                batch_a are kept as is.
+            :param mix_labels: If True, the labels of the two batches are mix using the same lambda.
+                If False, the label of batch_a are kept as is.
         """
         super().__init__()
         self.alpha = alpha
@@ -46,7 +50,7 @@ class MixUp(Module):
 
     def forward(
         self, batch_a: Tensor, batch_b: Tensor, labels_a: Tensor, labels_b: Tensor
-    ) -> (Tensor, Tensor):
+    ) -> Tuple[Tensor, Tensor]:
         """
             Apply MixUp to batches and labels.
         """
@@ -78,7 +82,7 @@ class MixUp(Module):
         return self._lambda
 
 
-class MixUpBatchShuffle(Module):
+class MixUpBatchShuffle(nn.Module):
     """
         Apply MixUp transform with the same batch in a different order. See MixUp module for details.
     """
@@ -89,7 +93,7 @@ class MixUpBatchShuffle(Module):
         super().__init__()
         self.mixup = MixUp(alpha, apply_max, mix_labels)
 
-    def forward(self, batch: Tensor, labels: Tensor) -> (Tensor, Tensor):
+    def forward(self, batch: Tensor, labels: Tensor) -> Tuple[Tensor, Tensor]:
         assert batch.shape[0] == labels.shape[0], f"{batch=}, {labels=}"
         batch_size = batch.shape[0]
         indexes = torch.randperm(batch_size)

@@ -1,16 +1,23 @@
-import logging
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import datetime
+import itertools
+import logging
+import os
+import pickle
 import random
+import time
+
+from collections import Iterable, Sized
+from typing import Callable, Generator, List, Tuple
+from zipfile import ZipFile, ZIP_DEFLATED
+
+import bz2
 import numpy as np
 import torch
-import time
-import itertools
-from collections import Iterable, Sized
-from zipfile import ZipFile, ZIP_DEFLATED
-import os
-from typing import Callable, Tuple
-import pickle
-import bz2
+
+from torch.utils.data.dataset import Dataset
 
 # TODO write q timer decorator that deppend on the logging level
 
@@ -355,23 +362,28 @@ class ZipCycle(Iterable, Sized):
         When a iterable smaller than the longest is over, this iterator is reset to the beginning.
 
         Example :
+        ```
         r1 = range(1, 4)
         r2 = range(1, 6)
         iters = ZipCycle([r1, r2])
         for v1, v2 in iters:
             print(v1, v2)
+        ```
 
         will print :
+        ```
         1 1
         2 2
         3 3
         1 4
         2 5
+        ```
     """
 
-    def __init__(self, iterables: list, align: str = "max"):
-        assert align in ["min", "max"]
+    def __init__(self, iterables: Iterable, align: str = "max"):
+        assert align in ("min", "max")
 
+        iterables = list(iterables)
         for iterable in iterables:
             if len(iterable) == 0:
                 raise RuntimeError("An iterable is empty.")
@@ -381,7 +393,7 @@ class ZipCycle(Iterable, Sized):
         f = max if align == "max" else min
         self._len = f([len(iterable) for iterable in self._iterables])
 
-    def __iter__(self) -> list:
+    def __iter__(self) -> Generator:
         cur_iters = [iter(iterable) for iterable in self._iterables]
         cur_count = [0 for _ in self._iterables]
 
@@ -401,6 +413,26 @@ class ZipCycle(Iterable, Sized):
 
     def __len__(self) -> int:
         return self._len
+
+
+class ZipDataset(Dataset):
+    def __init__(self, *datasets: Dataset,) -> None:
+        if len(datasets) > 0 and any(
+            len(dset) != len(datasets[0]) for dset in datasets  # type: ignore
+        ):
+            raise ValueError("Invalid datasets lengths for ZipDatasets.")
+
+        super().__init__()
+        self._datasets = datasets
+
+    def __getitem__(self, index: int) -> List:
+        item = []
+        for dset in self._datasets:
+            item.append(dset[index])
+        return item
+
+    def __len__(self) -> int:
+        return min(map(len, self._datasets))  # type: ignore
 
 
 class ZipCycleInfinite(ZipCycle):

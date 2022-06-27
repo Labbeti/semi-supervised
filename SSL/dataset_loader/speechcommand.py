@@ -18,7 +18,7 @@ from torch.utils.data.sampler import SubsetRandomSampler
 from tqdm import trange
 
 from SSL.dataset.speechcommands import SPEECHCOMMANDS
-from SSL.util.utils import Cacher, ZipCycle
+from SSL.util.utils import Cacher, ZipCycle, ZipDataset
 
 
 URL = "speech_commands_v0.02"
@@ -497,29 +497,31 @@ def dct_uniloss(
     return dct(**locals())
 
 
+# def mean_teacher(
+#     dataset_root,
+#     supervised_ratio: float = 0.1,
+#     batch_size: int = 128,
+#     train_transform: Optional[Module] = None,
+#     val_transform: Optional[Module] = None,
+#     **kwargs,
+# ) -> Tuple[None, Iterable, DataLoader]:
+#     return mean_teacher_helper(SpeechCommandAug, **locals())
+
+
 def mean_teacher(
     dataset_root,
     supervised_ratio: float = 0.1,
     batch_size: int = 128,
-    train_transform: Optional[Module] = None,
-    val_transform: Optional[Module] = None,
-    **kwargs,
-) -> Tuple[None, Iterable, DataLoader]:
-    return mean_teacher_helper(SpeechCommandAug, **locals())
-
-
-def mean_teacher_helper(
-    dataset_cls,
-    dataset_root,
-    supervised_ratio: float = 0.1,
-    batch_size: int = 128,
-    train_transform: Optional[Module] = None,
+    has_same_trans: bool = True,
+    student_transform: Optional[Module] = None,
+    teacher_transform: Optional[Module] = None,
     val_transform: Optional[Module] = None,
     **kwargs,
 ) -> Tuple[None, Iterable, DataLoader]:
     """
     Load the SpeechCommand for a student teacher learning
     """
+    dataset_cls = SpeechCommandAug
     loader_args = dict(
         num_workers=kwargs.get("num_workers", 0),
         pin_memory=kwargs.get("pin_memory", False),
@@ -539,14 +541,33 @@ def mean_teacher_helper(
     )
 
     # Training subset
-    train_dataset = dataset_cls(
-        root=dataset_path,
-        subset="train",
-        transform=train_transform,
-        download=True,
-        percent_to_drop=0.93,
-    )
-    s_idx, u_idx = _split_s_u(train_dataset, supervised_ratio)
+    if has_same_trans:
+        train_dataset = dataset_cls(
+            root=dataset_path,
+            subset="train",
+            transform=student_transform,
+            download=True,
+            percent_to_drop=0.93,
+        )
+        train_student_dataset = train_dataset
+    else:
+        train_student_dataset = dataset_cls(
+            root=dataset_path,
+            subset="train",
+            transform=student_transform,
+            download=True,
+            percent_to_drop=0.93,
+        )
+        train_teacher_dataset = dataset_cls(
+            root=dataset_path,
+            subset="train",
+            transform=teacher_transform,
+            download=True,
+            percent_to_drop=0.93,
+        )
+        train_dataset = ZipDataset(train_student_dataset, train_teacher_dataset)
+
+    s_idx, u_idx = _split_s_u(train_student_dataset, supervised_ratio)
 
     s_batch_size = int(math.floor(batch_size * supervised_ratio))
     u_batch_size = int(math.ceil(batch_size * (1 - supervised_ratio)))
@@ -562,23 +583,6 @@ def mean_teacher_helper(
     )
 
     train_loader = ZipCycle([train_s_loader, train_u_loader])
-
-    # TODO : rem
-    # import torch
-    # lim = 20
-    # indexes = torch.randperm(len(train_dataset))[:lim]
-    # train_labels = [train_dataset[i][1] for i in indexes]
-    # indexes = torch.randperm(len(val_dataset))[:lim]
-    # val_labels = [val_dataset[i][1] for i in indexes]
-
-    # print()
-    # print("DEBUGGING")
-    # print(f"{lim=}")
-    # print(f"{dataset_cls=}")
-    # print(f"{train_labels=}")
-    # print(f"{val_labels=}")
-    # breakpoint()
-
     return None, train_loader, val_loader
 
 

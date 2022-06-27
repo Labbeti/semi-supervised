@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 from augmentation_utils.augmentations import SignalAugmentation, SpecAugmentation
 from augmentation_utils.signal_augmentations import Occlusion
 from mlu.transforms import WaveformTransform, SpectrogramTransform
@@ -28,7 +31,24 @@ class WeakPreset:
 
 
 class StrongPreset:
-    pass
+    @staticmethod
+    def Occlusion(ratio, sr):
+        return Occlusion(ratio, sampling_rate=sr, max_size=0.75)
+
+    @staticmethod
+    def CutOutSpec(ratio):
+        return (
+            CutOutSpec(
+                width_scales=(0.5, 1.0),
+                height_scales=(0.5, 1.0),
+                fill_value=-80.0,
+                p=ratio,
+            ),
+        )
+
+    @staticmethod
+    def StretchPadCrop(ratio):
+        return StretchPadCrop(rates=(0.25, 1.75), align="random", p=ratio)
 
 
 def augmentation_factory(type: str, ratio: float, sr: int):
@@ -47,10 +67,10 @@ def augmentation_factory(type: str, ratio: float, sr: int):
 
 
 # Define the different augmentation pool
-
-
-def create_composer(use_aug: bool, aug_pool: list, process) -> ComposeAugmentation:
-    if not use_aug:
+def create_composer(
+    use_augmentation: bool, aug_pool: list, process
+) -> ComposeAugmentation:
+    if not use_augmentation:
         return process
 
     composer = ComposeAugmentation(

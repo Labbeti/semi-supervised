@@ -39,7 +39,7 @@ from SSL.util.utils import (
 )
 
 
-@hydra.main(config_name="../../config/mean-teacher/ubs8k.yaml")
+@hydra.main(config_path="../../config/mean-teacher/", config_name="ubs8k.yaml")
 def run(cfg: DictConfig) -> None:
     # keep the file directory as the current working directory
     os.chdir(hydra.utils.get_original_cwd())
@@ -50,12 +50,16 @@ def run(cfg: DictConfig) -> None:
     reset_seed(cfg.train_param.seed)
 
     # -------- Get the pre-processer --------
-    train_transform, val_transform = load_preprocesser(
-        cfg.dataset.dataset, "mean-teacher"
+    student_transform, val_transform = load_preprocesser(
+        cfg.dataset.dataset, "mean-teacher", aug_cfg=cfg.stu_aug,
     )
+    teacher_transform, _ = load_preprocesser(
+        cfg.dataset.dataset, "mean-teacher", aug_cfg=cfg.tea_aug,
+    )
+    has_same_trans = cfg.stu_aug == cfg.tea_aug
 
     # -------- Get the dataset --------
-    manager, train_loader, val_loader = load_dataset(
+    _manager, train_loader, val_loader = load_dataset(
         cfg.dataset.dataset,
         "mean-teacher",
         dataset_root=cfg.path.dataset_root,
@@ -63,15 +67,20 @@ def run(cfg: DictConfig) -> None:
         batch_size=cfg.train_param.batch_size,
         train_folds=cfg.train_param.train_folds,
         val_folds=cfg.train_param.val_folds,
-        train_transform=train_transform,
+        student_transform=student_transform,
+        teacher_transform=teacher_transform,
+        has_same_trans=has_same_trans,
         val_transform=val_transform,
         num_workers=cfg.hardware.nb_cpu,
         pin_memory=True,
         verbose=1,
     )
 
-    # The input shape of the data is used to generate the model
-    input_shape = tuple(train_loader._iterables[0].dataset[0][0].shape)
+    if has_same_trans:
+        # The input shape of the data is used to generate the model
+        input_shape = tuple(train_loader._iterables[0].dataset[0][0].shape)
+    else:
+        input_shape = tuple(train_loader._iterables[0].dataset._datasets[0][0][0].shape)
 
     # -------- Prepare the model --------
     torch.cuda.empty_cache()  # type: ignore
@@ -225,7 +234,7 @@ def run(cfg: DictConfig) -> None:
 
     # For applying mixup
     mixup_fn = MixUpBatchShuffle(
-        alpha=cfg.mixup.alpha, apply_max=cfg.mixup.max, mix_labels=cfg.mixup.label
+        alpha=cfg.mixup.alpha, apply_max=cfg.mixup.max, mix_labels=cfg.mixup.label,
     )
 
     def train(epoch):
@@ -237,25 +246,36 @@ def run(cfg: DictConfig) -> None:
         reset_metrics(metrics)
         student.train()
 
-        for i, (S, U) in enumerate(train_loader):
-            x_s, y_s = S
-            x_u, y_u = U
+        for i, (batch_s, batch_u) in enumerate(train_loader):
+            if has_same_trans:
+                x_s, y_s = batch_s
+                x_u, y_u = batch_u
+                stu_x_s = x_s
+                tea_x_s = x_s
+                stu_x_u = x_u
+                tea_x_u = x_u
+            else:
+                (stu_x_s, y_s), (tea_x_s, _) = batch_s
+                (stu_x_u, y_u), (tea_x_u, _) = batch_s
 
             # Apply mixup if needed, otherwise no mixup.
-            n_x_s, _, n_x_u, _ = x_s, y_s, x_u, y_u
+            tea_x_s, tea_x_u = tea_x_s, tea_x_u
             if cfg.mixup.use:
-                n_x_s, _ = mixup_fn(x_s, y_s)
-                n_x_u, _ = mixup_fn(x_u, y_u)
+                tea_x_s, _ = mixup_fn(tea_x_s, y_s)
+                tea_x_u, _ = mixup_fn(tea_x_u, y_u)
 
-            n_x_s, n_x_u = n_x_s.cuda().float(), n_x_u.cuda().float()
-            x_s, x_u = x_s.cuda().float(), x_u.cuda().float().float()
-            y_s, y_u = y_s.cuda(), y_u.cuda()
+            stu_x_s = stu_x_s.cuda().float()
+            stu_x_u = stu_x_u.cuda().float()
+            tea_x_s = tea_x_s.cuda().float()
+            tea_x_u = tea_x_u.cuda().float()
+            y_s = y_s.cuda()
+            y_u = y_u.cuda()
 
             # Predictions
-            student_s_logits = student(x_s)
-            student_u_logits = student(x_u)
-            teacher_s_logits = teacher(n_x_s)
-            teacher_u_logits = teacher(n_x_u)
+            student_s_logits = student(stu_x_s)
+            student_u_logits = student(stu_x_u)
+            teacher_s_logits = teacher(tea_x_s)
+            teacher_u_logits = teacher(tea_x_u)
 
             # Calculate supervised loss (only student on S)
             loss = loss_ce(student_s_logits, y_s)
