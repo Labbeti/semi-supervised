@@ -170,3 +170,5 @@ standalone/mean-teacher/.hydra/
 standalone/mean-teacher/multirun/
 standalone/deep-co-training/.hydra/
 standalone/deep-co-training/multirun/
+
+data/

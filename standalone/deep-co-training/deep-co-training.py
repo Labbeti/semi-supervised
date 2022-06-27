@@ -17,7 +17,7 @@ from SSL.util.model_loader import load_model
 from SSL.util.loaders import load_dataset, load_optimizer, load_callbacks, load_preprocesser
 from SSL.util.mixup import MixUpBatchShuffle
 from SSL.ramps import Warmup, sigmoid_rampup
-from SSL.losses import loss_cot, loss_diff, loss_sup
+from SSL.loss import loss_cot, loss_diff, loss_sup
 from torchsummary import summary
 import hydra
 from omegaconf import DictConfig, OmegaConf

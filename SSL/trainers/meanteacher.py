@@ -11,7 +11,7 @@ from SSL.util.model_loader import load_model
 from SSL.util.utils import DotDict, track_maximum, get_datetime
 from SSL.trainers.trainers import Trainer
 from SSL.util.loaders import load_preprocesser, load_optimizer, load_callbacks
-from SSL.losses import JensenShanon
+from SSL.loss import JensenShanon
 from SSL.util.checkpoint import CheckPoint, mSummaryWriter
 from metric_utils.metrics import CategoricalAccuracy, FScore, ContinueAverage
 
