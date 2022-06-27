@@ -521,7 +521,6 @@ def mean_teacher(
     """
     Load the SpeechCommand for a student teacher learning
     """
-    dataset_cls = SpeechCommandAug
     loader_args = dict(
         num_workers=kwargs.get("num_workers", 0),
         pin_memory=kwargs.get("pin_memory", False),
@@ -529,7 +528,7 @@ def mean_teacher(
     dataset_path = os.path.join(dataset_root)
 
     # validation subset
-    val_dataset = dataset_cls(
+    val_dataset = SpeechCommandAug(
         root=dataset_path,
         subset="validation",
         transform=val_transform,
@@ -542,7 +541,7 @@ def mean_teacher(
 
     # Training subset
     if has_same_trans:
-        train_dataset = dataset_cls(
+        train_dataset = SpeechCommandAug(
             root=dataset_path,
             subset="train",
             transform=student_transform,
@@ -551,14 +550,14 @@ def mean_teacher(
         )
         train_student_dataset = train_dataset
     else:
-        train_student_dataset = dataset_cls(
+        train_student_dataset = SpeechCommandAug(
             root=dataset_path,
             subset="train",
             transform=student_transform,
             download=True,
             percent_to_drop=0.93,
         )
-        train_teacher_dataset = dataset_cls(
+        train_teacher_dataset = SpeechCommandAug(
             root=dataset_path,
             subset="train",
             transform=teacher_transform,
