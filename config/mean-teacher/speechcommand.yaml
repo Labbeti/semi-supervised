@@ -56,3 +56,4 @@ path:
   tensorboard_path: ${path.tensorboard_root}/${dataset.dataset}/mean-teacher
 
 tag: ""
+resume: null

@@ -199,6 +199,9 @@ class SpeechCommands(SPEECHCOMMANDS):
             os.path.join(*self.root_path, path) for path in mapper[self.subset]
         ]
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(subset={self.subset})"
+
 
 class SpeechCommandAug(SpeechCommands):
     def __init__(
@@ -497,17 +500,6 @@ def dct_uniloss(
     return dct(**locals())
 
 
-# def mean_teacher(
-#     dataset_root,
-#     supervised_ratio: float = 0.1,
-#     batch_size: int = 128,
-#     train_transform: Optional[Module] = None,
-#     val_transform: Optional[Module] = None,
-#     **kwargs,
-# ) -> Tuple[None, Iterable, DataLoader]:
-#     return mean_teacher_helper(SpeechCommandAug, **locals())
-
-
 def mean_teacher(
     dataset_root,
     supervised_ratio: float = 0.1,
@@ -516,8 +508,9 @@ def mean_teacher(
     student_transform: Optional[Module] = None,
     teacher_transform: Optional[Module] = None,
     val_transform: Optional[Module] = None,
+    return_test_loader: bool = False,
     **kwargs,
-) -> Tuple[None, Iterable, DataLoader]:
+) -> Tuple:
     """
     Load the SpeechCommand for a student teacher learning
     """
@@ -538,6 +531,20 @@ def mean_teacher(
     val_loader = DataLoader(
         val_dataset, batch_size=batch_size, shuffle=True, **loader_args
     )
+    # Testing subset
+    if return_test_loader:
+        test_dataset = SpeechCommandAug(
+            root=dataset_path,
+            subset="testing",
+            transform=val_transform,
+            download=True,
+            percent_to_drop=0.0,
+        )
+        test_loader = DataLoader(
+            test_dataset, batch_size=batch_size, shuffle=True, **loader_args
+        )
+    else:
+        test_loader = None
 
     # Training subset
     if has_same_trans:
@@ -582,7 +589,10 @@ def mean_teacher(
     )
 
     train_loader = ZipCycle([train_s_loader, train_u_loader])
-    return None, train_loader, val_loader
+    if return_test_loader:
+        return None, train_loader, val_loader, test_loader
+    else:
+        return None, train_loader, val_loader
 
 
 # =============================================================================
