@@ -1,0 +1,4 @@
+- +slurm.output=/users/samova/elabbe/root_sslh/semi-supervised/logs/slurm/%j_data_gsc__method_mean-teacher__stu_aug_weak__tea_aug_weak.out
+- +slurm.error=/users/samova/elabbe/root_sslh/semi-supervised/logs/slurm/%j_data_gsc__method_mean-teacher__stu_aug_weak__tea_aug_weak.err
+- +slurm.mem_per_cpu=9000M
+- +slurm.mem=

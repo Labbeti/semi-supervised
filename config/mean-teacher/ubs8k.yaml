@@ -9,6 +9,8 @@ hydra:
     disable_existing_loggers: false
   run:
     dir: .
+  # Set args save in board dir
+  output_subdir: ${path.tensorboard_path}/hydra
 
 hardware:
   nb_cpu: 4

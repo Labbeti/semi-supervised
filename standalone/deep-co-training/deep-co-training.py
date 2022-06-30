@@ -358,9 +358,6 @@ def run(cfg: DictConfig) -> None:
                     end="\r",
                 )
 
-                # TODO : rem
-                break
-
         # Using tensorboard to monitor loss and acc\n",
         tensorboard.add_scalar(f"{prefix}/total_loss", avg_total.mean(size=None), epoch)
         tensorboard.add_scalar(f"{prefix}/Lsup", avg_sup.mean(size=None), epoch)

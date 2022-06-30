@@ -388,9 +388,6 @@ def run(cfg: DictConfig) -> None:
                     end="\r",
                 )
 
-            # TODO : rem
-            break
-
         tensorboard.add_scalar("train/student_acc_s", acc_ss, epoch)
         tensorboard.add_scalar("train/student_acc_u", acc_su, epoch)
         tensorboard.add_scalar("train/student_f1_s", fscore_ss, epoch)
