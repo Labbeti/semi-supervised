@@ -1,18 +1,22 @@
-import SSL.models.ubs8k as u8
-import SSL.models.ubs8k_test as u8_test
-import SSL.models.esc as esc
-import SSL.models.speechcommands as sc
-import SSL.models.audioset as a
-import SSL.models.ComParE2021_PRS as c
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import inspect
+
+import SSL.models.audioset as a
+import SSL.models.ComParE2021_PRS as c
+import SSL.models.esc as esc
+import SSL.models.gsc as sc
+import SSL.models.ubs8k as u8
+import SSL.models.ubs8k_test as u8_test
+
 
 dataset_mapper = {
     "ubs8k": [u8, u8_test],
     # "cifar10": [c10],
     "esc10": [esc],
     "esc50": [esc],
-    "speechcommand": [sc],
+    "gsc": [sc],
     # "gtzan": [gtzan],
     "audioset-balanced": [a],
     "audioset-unbalanced": [a],

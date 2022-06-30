@@ -1,4 +1,16 @@
-def build_mapper(modules: dict) -> dict:
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from typing import Any, Callable, Dict, List, Optional, Tuple
+
+from torch import nn
+from torch.optim.optimizer import Optimizer
+from torch.utils.data.dataloader import DataLoader
+
+from SSL.util.utils import ZipCycle
+
+
+def build_mapper(modules: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     dataset_mapper = dict()
 
     for dataset_name, dataset_module in modules.items():
@@ -13,10 +25,10 @@ def build_mapper(modules: dict) -> dict:
     return dataset_mapper
 
 
-def load_callbacks(dataset: str, framework: str, **kwargs):
+def load_callbacks(dataset: str, framework: str, **kwargs) -> List[Callable]:
     import SSL.callbacks.esc as e
     import SSL.callbacks.ubs8k as u
-    import SSL.callbacks.speechcommand as s
+    import SSL.callbacks.gsc as s
     import SSL.callbacks.audioset as a
     import SSL.callbacks.ComParE2021_PRS as c
 
@@ -26,7 +38,7 @@ def load_callbacks(dataset: str, framework: str, **kwargs):
             "esc10": e,
             "esc50": e,
             "ubs8k": u,
-            "speechcommand": s,
+            "gsc": s,
             "audioset-balanced": a,
             "audioset-unbalanced": a,
             "compare2021-prs": c,
@@ -36,10 +48,10 @@ def load_callbacks(dataset: str, framework: str, **kwargs):
     return load_helper(dataset, framework, dataset_mapper, **kwargs)
 
 
-def load_optimizer(dataset: str, framework: str, **kwargs):
+def load_optimizer(dataset: str, framework: str, **kwargs) -> Optimizer:
     import SSL.optimizer.esc as e
     import SSL.optimizer.ubs8k as u
-    import SSL.optimizer.speechcommand as s
+    import SSL.optimizer.gsc as s
     import SSL.optimizer.audioset as a
     import SSL.optimizer.ComParE2021_PRS as c
 
@@ -48,7 +60,7 @@ def load_optimizer(dataset: str, framework: str, **kwargs):
             "esc10": e,
             "esc50": e,
             "ubs8k": u,
-            "speechcommand": s,
+            "gsc": s,
             "audioset-balanced": a,
             "audioset-unbalanced": a,
             "compare2021-prs": c,
@@ -58,10 +70,10 @@ def load_optimizer(dataset: str, framework: str, **kwargs):
     return load_helper(dataset, framework, dataset_mapper, **kwargs)
 
 
-def load_preprocesser(dataset: str, framework: str, **kwargs):
+def load_preprocesser(dataset: str, framework: str, **kwargs) -> Tuple[nn.Module, nn.Module]:
     import SSL.preprocessing.esc as e
     import SSL.preprocessing.ubs8k as u
-    import SSL.preprocessing.speechcommand as s
+    import SSL.preprocessing.gsc as s
     import SSL.preprocessing.audioset as a
     import SSL.preprocessing.ComParE2021_PRS as c
 
@@ -70,7 +82,7 @@ def load_preprocesser(dataset: str, framework: str, **kwargs):
             "esc10": e,
             "esc50": e,
             "ubs8k": u,
-            "speechcommand": s,
+            "gsc": s,
             "audioset-balanced": a,
             "audioset-unbalanced": a,
             "compare2021-prs": c,
@@ -80,9 +92,9 @@ def load_preprocesser(dataset: str, framework: str, **kwargs):
     return load_helper(dataset, framework, dataset_mapper, **kwargs)
 
 
-def load_dataset(dataset: str, framework: str, **kwargs):
+def load_dataset(dataset: str, framework: str, **kwargs) -> Tuple[Any, ZipCycle, DataLoader, Optional[DataLoader]]:
     import SSL.dataset_loader.esc as e
-    import SSL.dataset_loader.speechcommand as s
+    import SSL.dataset_loader.gsc as s
     import SSL.dataset_loader.ubs8k as u
     import SSL.dataset_loader.audioset_balanced as a_bal
     import SSL.dataset_loader.audioset_unbalanced as a_unbal
@@ -97,7 +109,7 @@ def load_dataset(dataset: str, framework: str, **kwargs):
             "esc10": e,
             "esc50": e,
             "ubs8k": u,
-            "speechcommand": s,
+            "gsc": s,
             "audioset-balanced": a_bal,
             "audioset-unbalanced": a_unbal,
             "compare2021-prs": c,

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import datetime
+import inspect
 import itertools
 import logging
 import os
@@ -9,8 +10,7 @@ import pickle
 import random
 import time
 
-from collections import Iterable, Sized
-from typing import Callable, Generator, List, Tuple
+from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple
 from zipfile import ZipFile, ZIP_DEFLATED
 
 import bz2
@@ -25,9 +25,9 @@ from torch.utils.data.dataset import Dataset
 class DotDict(dict):
     """dot.notation access to dictionary attributes"""
 
-    __getattr__ = dict.get
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
+    __getattr__ = dict.__getitem__  # type: ignore
+    __setattr__ = dict.__setitem__  # type: ignore
+    __delattr__ = dict.__delitem__  # type: ignore
 
 
 def timeit_logging(func):
@@ -65,7 +65,7 @@ class Cacher:
         return decorator
 
 
-def get_training_printers(losses: dict, metrics: dict, filters: Tuple[str] = None):
+def get_training_printers(losses: Dict[str, Any], metrics: Dict[str, Any]) -> Tuple[str, str, str, str]:
     assert isinstance(losses, dict)
     assert isinstance(metrics, dict)
 
@@ -93,8 +93,9 @@ def get_training_printers(losses: dict, metrics: dict, filters: Tuple[str] = Non
     )
     train_form = "TRAIN" + value_form
     val_form = UNDERLINE_SEQ + "VALID" + value_form + RESET_SEQ
+    test_form = val_form.replace("VALID", "TEST ")
 
-    return header, train_form, val_form
+    return header, train_form, val_form, test_form
 
 
 def get_train_format(framework: str = "supervised"):
@@ -225,6 +226,8 @@ def get_train_format(framework: str = "supervised"):
             "mAP",
             "Time",
         )
+    else:
+        raise ValueError(f"Invalid argument {framework=}.")
 
     train_form = value_form
     val_form = UNDERLINE_SEQ + value_form + RESET_SEQ
@@ -232,7 +235,7 @@ def get_train_format(framework: str = "supervised"):
     return header, train_form, val_form
 
 
-def cache_to_disk(path: str = None):
+def cache_to_disk(path: Optional[str] = None) -> Callable:
     def decorator(func):
         def wrapper(*args, **kwargs):
             # Create a unique name for the cache base on the function arguments
@@ -268,7 +271,6 @@ def cache_to_disk(path: str = None):
 
 def conditional_cache_v2(func):
     def decorator(*args, **kwargs):
-        key_list = ",".join(map(str, args))
         key = kwargs.get("key", None)
         cached = kwargs.get("cached", None)
 
@@ -312,9 +314,9 @@ def track_maximum():
     return func
 
 
-def get_datetime():
+def get_datetime(sep: str = "-") -> str:
     now = datetime.datetime.now()
-    return str(now)[:10] + "_" + str(now)[11:-7]
+    return now.strftime(f"%Y{sep}%m{sep}%d_%H{sep}%M{sep}%S")
 
 
 def get_lr(optimizer):
@@ -322,11 +324,10 @@ def get_lr(optimizer):
         return param_group["lr"]
 
 
-def get_model_from_name(model_name):
-    import DCT.ubs8k.models as ubs8k_models
-    import DCT.ubs8k.models_test as ubs8k_models_test
-    import DCT.cifar10.models as cifar10_models
-    import inspect
+def get_model_from_name(model_name: str):
+    import SSL.models.ubs8k as ubs8k_models
+    import SSL.models.ubs8k_test as ubs8k_models_test
+    import SSL.models.cifar10 as cifar10_models
 
     all_members = []
     for module in [ubs8k_models, ubs8k_models_test, cifar10_models]:
@@ -347,16 +348,16 @@ def get_model_from_name(model_name):
     raise AttributeError("This model does not exist: %s " % msg)
 
 
-def reset_seed(seed):
+def reset_seed(seed: int) -> None:
     random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)  # type: ignore
+    torch.backends.cudnn.deterministic = True  # type: ignore
+    torch.backends.cudnn.benchmark = False  # type: ignore
 
 
-class ZipCycle(Iterable, Sized):
+class ZipCycle:
     """
         Zip through a list of iterables and sized objects of different lengths.
         When a iterable smaller than the longest is over, this iterator is reset to the beginning.
@@ -436,15 +437,14 @@ class ZipDataset(Dataset):
 
 
 class ZipCycleInfinite(ZipCycle):
-    def __init__(self, iterables: list):
+    def __init__(self, iterables: List[Iterable]) -> None:
         super().__init__(iterables)
 
-    def __iter__(self) -> list:
+    def __iter__(self) -> Generator:
         infinite_iters = [itertools.cycle(it) for it in self._iterables]
 
         while True:
             items = [next(inf_it) for inf_it in infinite_iters]
-
             yield items
 
 
@@ -488,8 +488,8 @@ def save_source_as_img(sourcepath: str):
     # Convert it into a 2d matrix
     desired_dimension = 500
     missing = desired_dimension - (zip_bin_n.size % desired_dimension)
-    zip_bin_p = np.concatenate((zip_bin_n, np.array([0] * missing, dtype=np.uint8)))
-    zip_bin_i = np.asarray(zip_bin_p).reshape(
+    zip_bin_p = np.array(np.concatenate((zip_bin_n, np.array([0] * missing, dtype=np.uint8))))
+    zip_bin_i = np.array(zip_bin_p).reshape(
         (desired_dimension, zip_bin_p.size // desired_dimension)
     )
 

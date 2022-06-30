@@ -337,7 +337,7 @@ def run(cfg: DictConfig) -> DictConfig:
         optimizer.step()
 
         # ======== Calc the metrics ========
-        with torch.set_grad_enabled(False):
+        with torch.no_grad():
             # Fscore
             fscore_s1 = m_(metrics.sup.fscore_1(S(logits_s1), y_s1))
             fscore_s2 = m_(metrics.sup.fscore_2(S(logits_s2), y_s2))
@@ -389,7 +389,7 @@ def run(cfg: DictConfig) -> DictConfig:
         m1.eval()
         m2.eval()
 
-        with torch.set_grad_enabled(False):
+        with torch.no_grad():
             for i, (X, y) in enumerate(val_loader):
                 x = X.cuda().float()
                 y = y.cuda().float()

@@ -202,7 +202,7 @@ def run(cfg: DictConfig) -> DictConfig:
         loss.backward()
         optimizer.step()
 
-        with torch.set_grad_enabled(False):
+        with torch.no_grad():
 
             pred = torch.sigmoid(logits)
             # pred_arg = torch.argmax(logits, dim=1)
@@ -248,7 +248,7 @@ def run(cfg: DictConfig) -> DictConfig:
         reset_metrics(val_metrics)
         model.eval()
 
-        with torch.set_grad_enabled(False):
+        with torch.no_grad():
             for i, (X, y) in enumerate(val_loader):
                 X = X.cuda().float()
                 y = F.one_hot(y.cuda(), num_classes=cfg.dataset.num_classes).float()

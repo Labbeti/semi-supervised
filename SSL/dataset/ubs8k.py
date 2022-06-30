@@ -1,19 +1,27 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import os
-from typing import Tuple
+
+from typing import Dict, Iterable, Tuple
 
 import torchaudio
-from torchaudio.transforms import Resample
+
 from torch import Tensor
-from torch.utils.data import Dataset
+from torch.utils.data.dataset import Dataset
+from torchaudio.transforms import Resample
+
+
+FOLDS = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
 
 
 class URBANSOUND8K(Dataset):
     NB_CLASS = 10
     CLASSES = []
 
-    def __init__(self, root, folds: list, resample_sr: int = 22050) -> None:
+    def __init__(self, root: str, folds: Iterable[int], resample_sr: int = 22050) -> None:
         self.root = root
-        self.folds = folds
+        self.folds = list(folds)
         self.resample_sr = resample_sr
 
         self.meta = self._load_metadata()
@@ -26,17 +34,17 @@ class URBANSOUND8K(Dataset):
 
         file_path = os.path.join(self.wav_dir, f"fold{fold}", filename)
 
-        waveform, sr = torchaudio.load(file_path)
+        waveform, sr = torchaudio.load(file_path)  # type: ignore
         waveform = self._to_mono(waveform)
         waveform = self._resample(waveform, sr)
         waveform = waveform.squeeze()
 
         return waveform, target
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.meta["filename"])
 
-    def _load_metadata(self):
+    def _load_metadata(self) -> Dict[str, list]:
         csv_path = os.path.join(
             self.root, "UrbanSound8K", "metadata", "UrbanSound8K.csv"
         )
@@ -46,12 +54,12 @@ class URBANSOUND8K(Dataset):
             lines = lines[1:]  # remove the header
 
         info = {"filename": [], "fold": [], "target": []}
-        for l in lines:
-            l_ = l.split(",")
-            if int(l_[5]) in self.folds:  # l[6] == file folds
-                info["filename"].append(l_[0])
-                info["fold"].append(int(l_[5]))
-                info["target"].append(int(l_[6]))
+        for line in lines:
+            splitted_line = line.split(",")
+            if int(splitted_line[5]) in self.folds:  # l[6] == file folds
+                info["filename"].append(splitted_line[0])
+                info["fold"].append(int(splitted_line[5]))
+                info["target"].append(int(splitted_line[6]))
 
         return info
 

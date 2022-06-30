@@ -137,7 +137,7 @@ def run(cfg: DictConfig) -> DictConfig:
             loss.backward()
             optimizer.step()
 
-            with torch.set_grad_enabled(False):
+            with torch.no_grad():
                 pred = torch.softmax(logits, dim=1)
                 pred_arg = torch.argmax(logits, dim=1)
                 y_one_hot = F.one_hot(y, num_classes=cfg.dataset.num_classes)
@@ -172,7 +172,7 @@ def run(cfg: DictConfig) -> DictConfig:
         reset_metrics()
         model.eval()
 
-        with torch.set_grad_enabled(False):
+        with torch.no_grad():
             for i, (X, y) in enumerate(val_loader):
                 X = X.cuda().float()
                 y = y.cuda().long()

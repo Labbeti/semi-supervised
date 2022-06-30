@@ -172,6 +172,6 @@ standalone/deep-co-training/.hydra/
 standalone/deep-co-training/multirun/
 
 data/
-*.ign
+*.ign.py
 *.ign/
 .tmp_*.sbatch

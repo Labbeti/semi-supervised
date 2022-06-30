@@ -68,7 +68,7 @@ class SupervisedTrainer(Trainer):
             loss.backward()
             self.optimizer.step()
 
-            with torch.set_grad_enabled(False):
+            with torch.no_grad():
                 pred = torch.softmax(logits, dim=1)
                 pred_arg = torch.argmax(logits, dim=1)
                 y_one_hot = F.one_hot(y, num_classes=self.num_classes)
@@ -109,7 +109,7 @@ class SupervisedTrainer(Trainer):
         self.reset_metrics()
         self.model.eval()
 
-        with torch.set_grad_enabled(False):
+        with torch.no_grad():
             for i, (X, y) in enumerate(self.val_loader):
                 X = X.cuda()
                 y = y.cuda()
@@ -171,7 +171,7 @@ class SupervisedTrainer(Trainer):
         self.reset_metrics()
         self.model.eval()
 
-        with torch.set_grad_enabled(False):
+        with torch.no_grad():
             for i, (X, y) in enumerate(self.test_loader):
                 X = X.cuda()
                 y = y.cuda()

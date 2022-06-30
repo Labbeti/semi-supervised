@@ -1,11 +1,17 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import os
+
+from typing import Iterable, Optional, Tuple
+
+import numpy as np
 import torchaudio
+
 from torch import Tensor
 from torch.nn import Module
-from torch.utils.data import Dataset
+from torch.utils.data.dataset import Dataset
 from torchaudio.datasets.utils import download_url, extract_archive
-import numpy
-from typing import Tuple
 
 # Download URL and checksums
 URL = {
@@ -48,11 +54,10 @@ class ESC50(Dataset):
     def __init__(
         self,
         root: str,
-        folds: tuple = FOLDS,
+        folds: Iterable[int] = FOLDS,
         download: bool = False,
-        transform: Module = None,
+        transform: Optional[Module] = None,
     ) -> None:
-
         super().__init__()
 
         self.root = root
@@ -71,13 +76,13 @@ class ESC50(Dataset):
         #         You can use download=True to download it.")
 
         # Prepare the medata
-        self._filenames = []
-        self._folds = []
-        self._targets = []
-        self._esc10s = []
+        self._filenames = np.empty((0,))
+        self._folds = np.empty((0,))
+        self._targets = np.empty((0,))
+        self._esc10s = np.empty((0,))
         self._load_metadata()
 
-    def __getitem__(self, index: int) -> Tuple[Tensor, int]:
+    def __getitem__(self, index: int) -> Tuple[Tensor, int, int]:
         """
         Args:
             index (int): Index
@@ -104,6 +109,11 @@ class ESC50(Dataset):
         c_target = 2
         c_esc10 = 4
 
+        filenames = []
+        folds = []
+        targets = []
+        esc10s = []
+
         # Read the csv file and remove header
         path = os.path.join(self.target_directory, META_FOLDER, "esc50.csv")
         with open(path, "r") as fp:
@@ -112,18 +122,18 @@ class ESC50(Dataset):
             for line in data:
                 items = line.split(",")
 
-                self._filenames.append(items[c_filename])
-                self._folds.append(int(items[c_fold]))
-                self._targets.append(int(items[c_target]))
-                self._esc10s.append(eval(items[c_esc10]))
+                filenames.append(items[c_filename])
+                folds.append(int(items[c_fold]))
+                targets.append(int(items[c_target]))
+                esc10s.append(eval(items[c_esc10]))
 
-        self._filenames = numpy.asarray(self._filenames)
-        self._folds = numpy.asarray(self._folds)
-        self._targets = numpy.asarray(self._targets)
-        self._esc10s = numpy.asarray(self._esc10s)
+        self._filenames = np.array(filenames)
+        self._folds = np.array(folds)
+        self._targets = np.array(targets)
+        self._esc10s = np.array(esc10s)
 
         # Keep only the required folds
-        folds_mask = sum([self._folds == f for f in self.required_folds]) >= 1
+        folds_mask = sum([self._folds == fold for fold in self.required_folds]) >= 1
 
         self._filenames = self._filenames[folds_mask]
         self._targets = self._targets[folds_mask]
@@ -152,12 +162,12 @@ class ESC50(Dataset):
         # TODO add checksum verification
         return True
 
-    def load_item(self, index: int) -> Tuple[Tensor, int]:
+    def load_item(self, index: int) -> Tuple[Tensor, int, int]:
         filename = self._filenames[index]
         target = self._targets[index]
 
         path = os.path.join(self.target_directory, AUDIO_FOLDER, filename)
-        waveform, sample_rate = torchaudio.load(path)
+        waveform, sample_rate = torchaudio.load(path)  # type: ignore
 
         return waveform, sample_rate, target
 
@@ -168,9 +178,9 @@ class ESC10(ESC50):
     def __init__(
         self,
         root: str,
-        folds: tuple = FOLDS,
+        folds: Iterable[int] = FOLDS,
         download: bool = False,
-        transform: Module = None,
+        transform: Optional[Module] = None,
     ) -> None:
         super().__init__(root, folds, download, transform)
 
@@ -185,6 +195,6 @@ class ESC10(ESC50):
         self._filenames = self._filenames[self._esc10s]
         self._targets = self._targets[self._esc10s]
 
-    def __getitem__(self, index: int) -> Tuple[Tensor, int]:
+    def __getitem__(self, index: int) -> Tuple[Tensor, int, int]:
         data, sampling_rate, target = super().__getitem__(index)
         return data, sampling_rate, ESC10.TARGET_MAPPER[target]

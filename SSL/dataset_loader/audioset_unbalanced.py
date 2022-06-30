@@ -1,6 +1,6 @@
 from torch.nn import Module
 from typing import Tuple
-from torch.utils.data import DataLoader
+from torch.utils.data.dataloader import DataLoader
 
 from SSL.dataset.audiosetDataset import (
     get_supervised,

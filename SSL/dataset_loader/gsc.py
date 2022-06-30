@@ -1,28 +1,30 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import copy
 import math
 import os
 import random
 
-from typing import Callable, Iterable, Optional, Tuple
+from typing import Any, Callable, Iterable, List, Optional, Tuple, Type
 
 import numpy as np
 import soundfile
 import torchaudio
 
-from torch import Tensor
-from torch.nn import Module
+from torch import nn, Tensor
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 from tqdm import trange
 
-from SSL.dataset.speechcommands import SPEECHCOMMANDS
+from SSL.dataset.gsc import SPEECHCOMMANDS
 from SSL.util.utils import Cacher, ZipCycle, ZipDataset
 
 
 URL = "speech_commands_v0.02"
-EXCEPT_FOLDER = ["_background_noise_", "silence"]
+NOISE_FOLDER = "_background_noise_"
+SILENCE_FOLDER = "silence"
+EXCEPT_FOLDERS = ["_background_noise_", "silence"]
 
 target_mapper = {
     "bed": 0,
@@ -63,16 +65,12 @@ target_mapper = {
 }
 all_classes = target_mapper
 
-import inspect
-
-print(inspect.getfile(SPEECHCOMMANDS))
-
 # =============================================================================
 # UTILITY FUNCTION
 # =============================================================================
 
 
-def _split_s_u(train_dataset, s_ratio: float = 1.0):
+def _split_s_u(train_dataset: SPEECHCOMMANDS, s_ratio: float = 1.0) -> Tuple[List[int], List[int]]:
     _train_dataset = SpeechCommandsStats.from_dataset(train_dataset)
 
     nb_class = len(target_mapper)
@@ -99,7 +97,7 @@ def _split_s_u(train_dataset, s_ratio: float = 1.0):
     return s_idx, u_idx
 
 
-def cache_feature(func):
+def cache_feature(func: Callable):
     def decorator(*args, **kwargs):
         key = ",".join(map(str, args))
 
@@ -120,7 +118,7 @@ class SpeechCommands(SPEECHCOMMANDS):
         subset: str = "train",
         url: str = URL,
         download: bool = False,
-        transform: Optional[Module] = None,
+        transform: Optional[nn.Module] = None,
         cache: bool = False,
         **kwargs,
     ) -> None:
@@ -195,8 +193,9 @@ class SpeechCommands(SPEECHCOMMANDS):
             "testing": testing_list,
         }
 
+        # mapper[self.subset] : ["backward/file.wav", ...]
         self._walker = [
-            os.path.join(*self.root_path, path) for path in mapper[self.subset]
+            os.path.join(self._path, path) for path in mapper[self.subset]
         ]
 
     def __repr__(self) -> str:
@@ -210,7 +209,7 @@ class SpeechCommandAug(SpeechCommands):
         subset: str = "train",
         url: str = URL,
         download: bool = False,
-        transform: Optional[Module] = None,
+        transform: Optional[nn.Module] = None,
         cache: bool = False,
         **kwargs,
     ) -> None:
@@ -220,10 +219,6 @@ class SpeechCommandAug(SpeechCommands):
         self.enable_cache = cache
         self.subset = subset
         self.root_path = self._walker[0].split("/")[:-2]
-
-        # Create cached version of some methods
-        # self.cached_getitem = Cacher(super().__getitem__)
-        # self.cached_transform = Cacher(transform)
 
         self._keep_valid_files()
 
@@ -243,9 +238,8 @@ class SpeechCommandAug(SpeechCommands):
 
 class SpeechCommandsStats(SpeechCommands):
     @classmethod
-    def from_dataset(cls, dataset: SPEECHCOMMANDS):
+    def from_dataset(cls, dataset: SPEECHCOMMANDS) -> "SpeechCommandsStats":
         root = dataset.root
-
         newone = cls(root=root)
         newone.__dict__.update(dataset.__dict__)
         return newone
@@ -260,8 +254,6 @@ class SpeechCommandsStats(SpeechCommands):
         utterance_number = int(utterance_number)
 
         # remove Load audio
-        # waveform, sample_rate = torchaudio.load(filepath)
-        # return waveform, sample_rate, label, speaker_id, utterance_number
         return label, speaker_id, utterance_number
 
     def __getitem__(self, index: int) -> Tuple[int, str, int]:
@@ -290,7 +282,7 @@ class SpeechCommand10(SpeechCommands):
         subset: str = "train",
         url: str = URL,
         download: bool = False,
-        transform: Optional[Module] = None,
+        transform: Optional[nn.Module] = None,
         percent_to_drop: float = 0.5,
     ) -> None:
         super().__init__(root, subset, url, download, transform)
@@ -376,7 +368,7 @@ class SpeechCommand10(SpeechCommands):
 
         # Split each noise files into 1 second long segment
         to_process = []
-        for file in os.listdir(os.path.join(*self.root_path, EXCEPT_FOLDER)):
+        for file in os.listdir(os.path.join(*self.root_path, NOISE_FOLDER)):
             if file[-4:] == ".wav":
                 to_process.append(os.path.join(noise_path, file))
 
@@ -408,7 +400,7 @@ class SpeechCommand10(SpeechCommands):
 
         # Split each noise files into 1 second long segment
         to_process = []
-        for file in os.listdir(os.path.join(*self.root_path, EXCEPT_FOLDER)):
+        for file in os.listdir(os.path.join(*self.root_path, NOISE_FOLDER)):
             if file[-4:] == ".wav":
                 to_process.append(os.path.join(noise_path, file))
 
@@ -439,33 +431,52 @@ class SpeechCommand10(SpeechCommands):
 
 
 def dct(
-    dataset_root,
+    dataset_root: str,
     supervised_ratio: float = 0.1,
     batch_size: int = 100,
-    train_transform: Optional[Module] = None,
-    val_transform: Optional[Module] = None,
-    **kwargs,
-) -> Tuple[None, Iterable, DataLoader]:
+    train_transform_s: Optional[nn.Module] = None,
+    train_transform_u: Optional[nn.Module] = None,
+    val_transform: Optional[nn.Module] = None,
+    download: bool = True,
+    dataset_class: Type[SpeechCommands] = SpeechCommands,
+    num_workers: int = 0,
+    pin_memory: bool = False,
+    verbose: int = 1,
+    train_folds: Any = None,
+    val_folds: Any = None,
+) -> Tuple[None, Iterable, DataLoader, DataLoader]:
 
     loader_args = dict(
-        num_workers=kwargs.get("num_workers", 0),
-        pin_memory=kwargs.get("pin_memory", False),
+        num_workers=num_workers,
+        pin_memory=pin_memory,
     )
-    dataset_path = os.path.join(dataset_root)
 
     # Validation subset
-    val_dataset = SpeechCommands(
-        root=dataset_path, subset="validation", transform=train_transform, download=True
+    val_dataset = dataset_class(
+        root=dataset_root, subset="validation", transform=val_transform, download=download
     )
     val_loader = DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=True, **loader_args
+        val_dataset, batch_size=batch_size, shuffle=False, **loader_args
+    )
+    test_dataset = SpeechCommandAug(
+        root=dataset_root,
+        subset="testing",
+        transform=val_transform,
+        download=download,
+        percent_to_drop=0.0,
+    )
+    test_loader = DataLoader(
+        test_dataset, batch_size=batch_size, shuffle=False, **loader_args
     )
 
     # Training subset
-    train_dataset = SpeechCommands(
-        root=dataset_path, subset="train", transform=val_transform, download=True
+    train_dataset_s = dataset_class(
+        root=dataset_root, subset="train", transform=val_transform, download=download
     )
-    s_idx, u_idx = _split_s_u(train_dataset, supervised_ratio)
+    train_dataset_u = copy.deepcopy(train_dataset_s)
+    train_dataset_u.transform = train_transform_u
+
+    s_idx, u_idx = _split_s_u(train_dataset_s, supervised_ratio)
 
     s_batch_size = int(math.floor(batch_size * supervised_ratio))
     u_batch_size = int(math.ceil(batch_size * (1 - supervised_ratio)))
@@ -474,103 +485,89 @@ def dct(
     sampler_u = SubsetRandomSampler(u_idx)
 
     train_loader_s1 = DataLoader(
-        train_dataset, batch_size=s_batch_size, sampler=sampler_s, **loader_args
+        train_dataset_s, batch_size=s_batch_size, sampler=sampler_s, **loader_args
     )
     train_loader_s2 = DataLoader(
-        train_dataset, batch_size=s_batch_size, sampler=sampler_s, **loader_args
+        train_dataset_s, batch_size=s_batch_size, sampler=sampler_s, **loader_args
     )
     train_loader_u = DataLoader(
-        train_dataset, batch_size=u_batch_size, sampler=sampler_u, **loader_args
+        train_dataset_u, batch_size=u_batch_size, sampler=sampler_u, **loader_args
     )
 
     # combine the three loader into one
     train_loader = ZipCycle([train_loader_s1, train_loader_s2, train_loader_u])
 
-    return None, train_loader, val_loader
+    return None, train_loader, val_loader, test_loader
 
 
 def dct_uniloss(
-    dataset_root,
-    supervised_ratio: float = 0.1,
-    batch_size: int = 100,
-    train_transform: Optional[Module] = None,
-    val_transform: Optional[Module] = None,
     **kwargs,
-) -> Tuple[None, Iterable, DataLoader]:
-    return dct(**locals())
+) -> Tuple[None, Iterable, DataLoader, DataLoader]:
+    return dct(**kwargs)
 
 
 def mean_teacher(
-    dataset_root,
+    dataset_root: str,
     supervised_ratio: float = 0.1,
     batch_size: int = 128,
     has_same_trans: bool = True,
-    student_transform: Optional[Module] = None,
-    teacher_transform: Optional[Module] = None,
-    val_transform: Optional[Module] = None,
-    return_test_loader: bool = False,
-    **kwargs,
-) -> Tuple:
+    student_transform: Optional[nn.Module] = None,
+    teacher_transform: Optional[nn.Module] = None,
+    val_transform: Optional[nn.Module] = None,
+    download: bool = True,
+    num_workers: int = 0,
+    pin_memory: bool = False,
+    dataset_class: Type[SpeechCommands] = SpeechCommandAug,
+    verbose: int = 1,
+    train_folds: Any = None,
+    val_folds: Any = None,
+) -> Tuple[None, ZipCycle, DataLoader, DataLoader]:
     """
     Load the SpeechCommand for a student teacher learning
     """
     loader_args = dict(
-        num_workers=kwargs.get("num_workers", 0),
-        pin_memory=kwargs.get("pin_memory", False),
+        num_workers=num_workers,
+        pin_memory=pin_memory,
     )
     dataset_path = os.path.join(dataset_root)
 
     # validation subset
-    val_dataset = SpeechCommandAug(
+    val_dataset = dataset_class(
         root=dataset_path,
         subset="validation",
         transform=val_transform,
-        download=True,
+        download=download,
         percent_to_drop=0.0,
     )
     val_loader = DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=True, **loader_args
+        val_dataset, batch_size=batch_size, shuffle=False, **loader_args
     )
     # Testing subset
-    if return_test_loader:
-        test_dataset = SpeechCommandAug(
-            root=dataset_path,
-            subset="testing",
-            transform=val_transform,
-            download=True,
-            percent_to_drop=0.0,
-        )
-        test_loader = DataLoader(
-            test_dataset, batch_size=batch_size, shuffle=True, **loader_args
-        )
-    else:
-        test_loader = None
+    test_dataset = dataset_class(
+        root=dataset_path,
+        subset="testing",
+        transform=val_transform,
+        download=download,
+        percent_to_drop=0.0,
+    )
+    test_loader = DataLoader(
+        test_dataset, batch_size=batch_size, shuffle=False, **loader_args
+    )
 
     # Training subset
+    train_student_dataset = dataset_class(
+        root=dataset_path,
+        subset="train",
+        transform=student_transform,
+        download=download,
+        percent_to_drop=0.93,
+    )
+
     if has_same_trans:
-        train_dataset = SpeechCommandAug(
-            root=dataset_path,
-            subset="train",
-            transform=student_transform,
-            download=True,
-            percent_to_drop=0.93,
-        )
-        train_student_dataset = train_dataset
+        train_dataset = train_student_dataset
     else:
-        train_student_dataset = SpeechCommandAug(
-            root=dataset_path,
-            subset="train",
-            transform=student_transform,
-            download=True,
-            percent_to_drop=0.93,
-        )
-        train_teacher_dataset = SpeechCommandAug(
-            root=dataset_path,
-            subset="train",
-            transform=teacher_transform,
-            download=True,
-            percent_to_drop=0.93,
-        )
+        train_teacher_dataset = copy.deepcopy(train_student_dataset)
+        train_teacher_dataset.transform = teacher_transform
         train_dataset = ZipDataset(train_student_dataset, train_teacher_dataset)
 
     s_idx, u_idx = _split_s_u(train_student_dataset, supervised_ratio)
@@ -589,10 +586,7 @@ def mean_teacher(
     )
 
     train_loader = ZipCycle([train_s_loader, train_u_loader])
-    if return_test_loader:
-        return None, train_loader, val_loader, test_loader
-    else:
-        return None, train_loader, val_loader
+    return None, train_loader, val_loader, test_loader
 
 
 # =============================================================================
@@ -602,13 +596,13 @@ def supervised(
     dataset_root,
     supervised_ratio: float = 1.0,
     batch_size: int = 128,
-    train_transform: Optional[Module] = None,
-    val_transform: Optional[Module] = None,
+    train_transform: Optional[nn.Module] = None,
+    val_transform: Optional[nn.Module] = None,
     augmentation: Optional[str] = None,
+    download: bool = True,
     num_workers: int = 0,
     pin_memory: bool = False,
-    **kwargs,
-) -> Tuple[None, DataLoader, DataLoader]:
+) -> Tuple[None, DataLoader, DataLoader, DataLoader]:
     """
     Load the SppechCommand for a supervised training
     """
@@ -626,11 +620,22 @@ def supervised(
         subset="validation",
         transform=val_transform,
         cache=True,
-        download=True,
+        download=download,
         percent_to_drop=0.0,
     )
     val_loader = DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=True, **loader_args
+        val_dataset, batch_size=batch_size, shuffle=False, **loader_args
+    )
+    # Testing subset
+    test_dataset = SpeechCommandAug(
+        root=dataset_path,
+        subset="testing",
+        transform=val_transform,
+        download=download,
+        percent_to_drop=0.0,
+    )
+    test_loader = DataLoader(
+        test_dataset, batch_size=batch_size, shuffle=False, **loader_args
     )
 
     # Training subset
@@ -639,7 +644,7 @@ def supervised(
         subset="train",
         transform=train_transform,
         cache=use_cache,
-        download=True,
+        download=download,
     )
 
     if supervised_ratio == 1.0:
@@ -655,8 +660,8 @@ def supervised(
             train_dataset, batch_size=batch_size, sampler=sampler_s, **loader_args
         )
 
-    return None, train_loader, val_loader
+    return None, train_loader, val_loader, test_loader
 
 
 def fixmatch(**kwargs):
-    pass
+    raise NotImplementedError

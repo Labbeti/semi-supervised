@@ -67,7 +67,7 @@ dataset_info = DotDict(
             {
                 "ComParE2021-PRS".lower(): "compare2021-prs.yaml",
                 "esc10": "esc10.yaml",
-                "speechcommand": "speechcommand.yaml",
+                "gsc": "gsc.yaml",
                 "ubs8k": "ubs8k.yaml",
                 "audioset-unbalanced": "audioset-unbalanced.yaml",
                 "audioset-balanced": "audioset-balanced.yaml",
@@ -78,7 +78,7 @@ dataset_info = DotDict(
                 "ubs8k": 10,
                 "esc10": 10,
                 "esc50": 50,
-                "speechcommand": 35,
+                "gsc": 35,
                 "compare2021-prs": 5,
                 "audioset-unbalanced": 527,
                 "audioset-balanced": 527,

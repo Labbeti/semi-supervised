@@ -1,19 +1,20 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import os
-from typing import Tuple
+
+from typing import Dict, List, Tuple
 
 import torchaudio
-from torch.utils.data import Dataset
+
 from torch import Tensor
-from torchaudio.datasets.utils import (
-    download_url,
-    extract_archive,
-)
+from torch.utils.data.dataset import Dataset
 
 
 class COMPARE2021_PRS(Dataset):
     CLASSES = ["background", "chimpanze", "geunon", "mandrille", "redcap"]
 
-    def __init__(self, root, subset: str) -> None:
+    def __init__(self, root: str, subset: str) -> None:
         assert subset in ["train", "test", "devel"]
         self.root = root
         self.subset = subset
@@ -26,11 +27,11 @@ class COMPARE2021_PRS(Dataset):
         target = self.subsets_info["target"][idx]
         file_path = os.path.join(self.wav_dir, audio_name)
 
-        waveform, sr = torchaudio.load(file_path)
+        waveform, sr = torchaudio.load(file_path)  # type: ignore
 
         return waveform, target
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.subsets_info["audio_names"])
 
     def _to_cls_idx(self, target_str: str) -> int:
@@ -39,15 +40,15 @@ class COMPARE2021_PRS(Dataset):
 
         return COMPARE2021_PRS.CLASSES.index(target_str)
 
-    def _load_csv(self):
-        def read_csv(path) -> Tuple[list, list]:
-            with open(path, "r") as f:
-                lines = f.read().splitlines()
+    def _load_csv(self) -> Dict[str, List]:
+        def read_csv(path: str) -> Dict[str, List]:
+            with open(path, "r") as file:
+                lines = file.read().splitlines()
                 lines = lines[1:]
 
             output = {
-                "audio_names": [l.split(",")[0] for l in lines],
-                "target": [self._to_cls_idx(l.split(",")[1]) for l in lines],
+                "audio_names": [line.split(",")[0] for line in lines],
+                "target": [self._to_cls_idx(line.split(",")[1]) for line in lines],
             }
 
             return output

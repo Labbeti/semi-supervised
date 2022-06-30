@@ -1,25 +1,29 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import functools
 import itertools
 import random
-from typing import Tuple
 
-import numpy
+from typing import Optional, Tuple
+
+import numpy as np
+
+from torch import nn
+from torch.utils.data.dataloader import DataLoader
+from torch.utils.data.sampler import Sampler
 from tqdm import tqdm
-from torch.nn import Module
-from torch.utils.data import DataLoader
-from torch.utils.data.sampler import SubsetRandomSampler, Sampler
+
+from SSL.dataset.ComParE2021_PRS import COMPARE2021_PRS
 from SSL.util.utils import (
     cache_to_disk,
-    ZipCycleInfinite,
     Cacher,
-    cache_to_disk,
-    cache_feature,
+    ZipCycleInfinite,
 )
-from SSL.dataset.ComParE2021_PRS import COMPARE2021_PRS
 
 
 class ComParE2021_PRS(COMPARE2021_PRS):
-    def __init__(self, root, subset, transform: Module = None, cache: bool = False):
+    def __init__(self, root, subset, transform: Optional[nn.Module] = None, cache: bool = False):
         super().__init__(root, subset)
         self.transform = transform
         self.cache = cache
@@ -45,21 +49,21 @@ class ComParE2021_PRS(COMPARE2021_PRS):
 def class_balance_split(
     dataset,
     supervised_ratio: float = 0.1,
-    unsupervised_ratio: float = None,
+    unsupervised_ratio: Optional[float] = None,
     batch_size: int = 64,
     verbose: bool = True,
     seed: int = 1234,
-):
+) -> Tuple:
     def to_one_hot(idx):
         one_hot = [0] * len(COMPARE2021_PRS.CLASSES)
         one_hot[idx] = 1
 
         return one_hot
 
-    def fill_subset(remaining_samples, expected):
+    def fill_subset(remaining_samples, expected) -> Tuple:
         nb_classes = len(COMPARE2021_PRS.CLASSES)
 
-        subset_occur = numpy.zeros(shape=(nb_classes,))
+        subset_occur = np.zeros(shape=(nb_classes,))
         subset = []
 
         with tqdm(total=sum(expected)) as progress:
@@ -77,7 +81,7 @@ def class_balance_split(
 
                     idx += 1
 
-        return numpy.asarray(subset), remaining_samples
+        return np.array(subset), remaining_samples
 
     if unsupervised_ratio is None:
         unsupervised_ratio = 1 - supervised_ratio
@@ -93,15 +97,14 @@ def class_balance_split(
     all_target_idx = list(range(len(all_targets)))
 
     # expected occurance and tolerance
-    total_occur = numpy.sum(all_targets, axis=0)
-    s_expected_occur = numpy.ceil(total_occur * supervised_ratio)
-    u_expected_occur = numpy.ceil(total_occur * unsupervised_ratio)
-    print(" s_expected_occur: ", s_expected_occur)
-    print("s expected occur: ", sum(s_expected_occur))
+    total_occur = np.sum(all_targets, axis=0)
+    s_expected_occur = np.ceil(total_occur * supervised_ratio)
+    print(f"{s_expected_occur=}")
+    print(f"{sum(s_expected_occur)=}")
 
     all_sample = list(zip(all_targets, all_target_idx))
     s_subset, remaining_sample = fill_subset(all_sample, s_expected_occur)
-    u_subset = numpy.asarray([s[1] for s in remaining_sample])
+    u_subset = np.array([s[1] for s in remaining_sample])
 
     return s_subset, u_subset
 
@@ -190,8 +193,8 @@ def supervised(
     dataset_root,
     supervised_ratio: float = 0.1,
     batch_size: int = 128,
-    train_transform: Module = None,
-    val_transform: Module = None,
+    train_transform: Optional[nn.Module] = None,
+    val_transform: Optional[nn.Module] = None,
     augmentation: str = None,
     num_workers: int = 5,
     pin_memory: bool = False,
@@ -217,8 +220,8 @@ def supervised(
         train_dataset, supervised_ratio, batch_size=batch_size, seed=seed
     )
 
-    s_batch_size = int(numpy.floor(batch_size * supervised_ratio))
-    # u_batch_size = int(numpy.ceil(batch_size * (1 - supervised_ratio)))
+    s_batch_size = int(np.floor(batch_size * supervised_ratio))
+    # u_batch_size = int(np.ceil(batch_size * (1 - supervised_ratio)))
 
     sampler_s = IterationBalancedSampler(train_dataset, s_idx, shuffle=True)
     # sampler_u = InfiniteSampler(u_idx, shuffle=True)
@@ -246,8 +249,8 @@ def mean_teacher(
     dataset_root,
     supervised_ratio: float = 0.1,
     batch_size: int = 128,
-    train_transform: Module = None,
-    val_transform: Module = None,
+    train_transform: Optional[nn.Module] = None,
+    val_transform: Optional[nn.Module] = None,
     num_workers: int = 5,
     pin_memory: bool = False,
     seed: int = 1234,
@@ -268,8 +271,8 @@ def mean_teacher(
         train_dataset, supervised_ratio, batch_size=batch_size, seed=seed
     )
 
-    s_batch_size = int(numpy.floor(batch_size * supervised_ratio))
-    u_batch_size = int(numpy.ceil(batch_size * (1 - supervised_ratio)))
+    s_batch_size = int(np.floor(batch_size * supervised_ratio))
+    u_batch_size = int(np.ceil(batch_size * (1 - supervised_ratio)))
 
     print("s_idx: ", len(s_idx))
     print("u_idx: ", len(u_idx))

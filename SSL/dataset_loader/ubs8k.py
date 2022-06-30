@@ -1,18 +1,30 @@
-from SSL.util.utils import ZipCycle, Cacher
-from SSL.dataset.ubs8k import URBANSOUND8K
-from torch.nn import Module
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import copy
+import math
+import random
+
+from typing import Any, Iterable, List, Optional, Tuple, Union
+
+from torch import nn, Tensor
+from torch.utils.data import SubsetRandomSampler
+from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
-
-import os
-import random
-import numpy as np
-from copy import copy
-import torch.utils.data as torch_data
+from SSL.dataset.ubs8k import URBANSOUND8K, FOLDS
+from SSL.dataset_loader.utils import guess_folds
+from SSL.util.utils import Cacher, ZipCycle, ZipDataset
 
 
 class UrbanSound8K(URBANSOUND8K):
-    def __init__(self, root, folds, transform: Module = None, cache: bool = False):
+    def __init__(
+        self,
+        root: str,
+        folds: Iterable[int],
+        transform: Optional[nn.Module] = None,
+        cache: bool = False,
+    ) -> None:
         super().__init__(root, folds)
         self.transform = transform
         self.cache = cache
@@ -20,22 +32,22 @@ class UrbanSound8K(URBANSOUND8K):
         self.cached_getitem = Cacher(self._cacheable_getitem)
         self.cached_transform = Cacher(self._cacheable_transform)
 
-    def __getitem__(self, idx: int):
+    def __getitem__(self, idx: int) -> Tuple[Tensor, int]:
         data, target = self.cached_getitem(idx=idx, caching=True)
-
         data = self.cached_transform(data, key=idx, caching=self.cache)
-
         return data, target
 
-    def _cacheable_getitem(self, idx: int):
+    def _cacheable_getitem(self, idx: int) -> Tuple[Tensor, int]:
         return super().__getitem__(idx)
 
-    def _cacheable_transform(self, x, key):
+    def _cacheable_transform(self, x, key=None):
         if self.transform is not None:
             return self.transform(x)
+        else:
+            return x
 
 
-def split_s_u(dataset, s_ratio: float) -> list:
+def split_s_u(dataset, s_ratio: float) -> Tuple[List[int], List[int]]:
     idx_list = list(range(len(dataset.meta["filename"])))
     s_idx, u_idx = [], []
 
@@ -49,7 +61,7 @@ def split_s_u(dataset, s_ratio: float) -> list:
         random.shuffle(class_idx[i])
 
         nb_item = len(class_idx[i])
-        nb_s = int(np.ceil(nb_item * s_ratio))
+        nb_s = int(math.ceil(nb_item * s_ratio))
 
         s_idx += class_idx[i][:nb_s]
         u_idx += class_idx[i][nb_s:]
@@ -58,27 +70,22 @@ def split_s_u(dataset, s_ratio: float) -> list:
 
 
 def supervised(
-    dataset_root,
+    dataset_root: str,
     supervised_ratio: float = 1.0,
     batch_size: int = 64,
-    train_folds: tuple = (1, 2, 3, 4, 5, 6, 7, 8, 9),
-    val_folds: tuple = (10,),
-    train_transform: Module = None,
-    val_transform: Module = None,
-    augmentation: str = None,
+    train_folds: Union[Iterable[int], int, None] = (1, 2, 3, 4, 5, 6, 7, 8, 9),
+    val_folds: Union[Iterable[int], int, None] = (10,),
+    train_transform: Optional[nn.Module] = None,
+    val_transform: Optional[nn.Module] = None,
+    use_cache: bool = False,
     num_workers: int = 0,
     pin_memory: bool = False,
-    verbose=1,
-    **kwargs,
-):
+    verbose: int = 1,
+) -> Tuple:
     """
     Load the UrbanSound dataset for supervised systems.
     """
-    use_cache = True
-    if augmentation is not None:
-        use_cache = False
-        print("Augmentation are used, disabling transform cache ...")
-
+    train_folds, val_folds = guess_folds(train_folds, val_folds, FOLDS, verbose)
     loader_args = {"num_workers": num_workers, "pin_memory": pin_memory}
 
     # validation subset
@@ -87,109 +94,116 @@ def supervised(
         dataset_root, val_folds, transform=val_transform, cache=True
     )
     print("nb file validation: ", len(val_dataset))
-    val_loader = torch_data.DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=True, **loader_args
+    val_loader = DataLoader(
+        val_dataset, batch_size=batch_size, shuffle=False, **loader_args
     )
 
     # training subset
-    # train_dataset = Dataset(manager, folds=train_folds, cached=True)
     train_dataset = UrbanSound8K(
         dataset_root, train_folds, transform=train_transform, cache=use_cache
     )
     print("nb file training: ", len(train_dataset))
 
     if supervised_ratio == 1.0:
-        train_loader = torch_data.DataLoader(
+        train_loader = DataLoader(
             train_dataset, batch_size=batch_size, shuffle=True, **loader_args
         )
 
     else:
-        s_idx, u_idx = split_s_u(train_dataset, supervised_ratio)
+        s_idx, _u_idx = split_s_u(train_dataset, supervised_ratio)
 
         # Train loader only use the s_idx
-        sampler_s = torch_data.SubsetRandomSampler(s_idx)
-        train_loader = torch_data.DataLoader(
-            train_dataset, batch_size=batch_size, sampler=sampler_s
+        sampler_s = SubsetRandomSampler(s_idx)
+        train_loader = DataLoader(
+            train_dataset,
+            batch_size=batch_size,
+            sampler=sampler_s,
         )
 
     return None, train_loader, val_loader
 
 
 def mean_teacher(
-    dataset_root,
+    dataset_root: str,
     supervised_ratio: float = 0.1,
     batch_size: int = 64,
-    train_folds: tuple = (1, 2, 3, 4, 5, 6, 7, 8, 9),
-    val_folds: tuple = (10,),
-    train_transform: Module = None,
-    val_transform: Module = None,
-    augmentation: str = None,
+    train_folds: Union[Iterable[int], int, None] = (1, 2, 3, 4, 5, 6, 7, 8, 9),
+    val_folds: Union[Iterable[int], int, None] = (10,),
+    has_same_trans: bool = True,
+    student_transform: Optional[nn.Module] = None,
+    teacher_transform: Optional[nn.Module] = None,
+    val_transform: Optional[nn.Module] = None,
+    use_cache: bool = False,
     num_workers: int = 0,
     pin_memory: bool = False,
-    verbose=1,
-    **kwargs,
-):
-
-    use_cache = True
-    if augmentation is not None:
-        use_cache = False
-        print("Augmentation are used, disabling transform cache ...")
-
+    verbose: int = 1,
+    download: Any = None,
+) -> Tuple:
+    train_folds, val_folds = guess_folds(train_folds, val_folds, FOLDS, verbose)
     loader_args = {"num_workers": num_workers, "pin_memory": pin_memory}
 
     # validation subset
     val_dataset = UrbanSound8K(
         dataset_root, val_folds, transform=val_transform, cache=True
     )
-    val_loader = torch_data.DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=True, **loader_args
+    val_loader = DataLoader(
+        val_dataset, batch_size=batch_size, shuffle=False, **loader_args
     )
 
-    # training subset
-    train_dataset = UrbanSound8K(
-        dataset_root, train_folds, transform=train_transform, cache=use_cache
+    train_student_dataset = UrbanSound8K(
+        dataset_root, train_folds, transform=student_transform, cache=use_cache
     )
+    if has_same_trans:
+        # training subset
+        train_dataset = train_student_dataset
+    else:
+        train_teacher_dataset = copy.deepcopy(train_student_dataset)
+        train_teacher_dataset.transform = teacher_transform
+        train_dataset = ZipDataset(train_student_dataset, train_teacher_dataset)
 
     # Calc the size of the Supervised and Unsupervised batch
-    s_idx, u_idx = split_s_u(train_dataset, supervised_ratio)
+    s_idx, u_idx = split_s_u(train_student_dataset, supervised_ratio)
 
-    s_batch_size = int(np.floor(batch_size * supervised_ratio))
-    u_batch_size = int(np.ceil(batch_size * (1 - supervised_ratio)))
+    s_batch_size = int(math.floor(batch_size * supervised_ratio))
+    u_batch_size = int(math.ceil(batch_size * (1.0 - supervised_ratio)))
 
-    sampler_s = torch_data.SubsetRandomSampler(s_idx)
-    sampler_u = torch_data.SubsetRandomSampler(u_idx)
+    sampler_s = SubsetRandomSampler(s_idx)
+    sampler_u = SubsetRandomSampler(u_idx)
 
-    train_s_loader = torch_data.DataLoader(
-        train_dataset, batch_size=s_batch_size, sampler=sampler_s, **loader_args
+    train_s_loader = DataLoader(
+        train_dataset,
+        batch_size=s_batch_size,
+        sampler=sampler_s,
+        **loader_args,
     )
-    train_u_loader = torch_data.DataLoader(
-        train_dataset, batch_size=u_batch_size, sampler=sampler_u, **loader_args
+    train_u_loader = DataLoader(
+        train_dataset,
+        batch_size=u_batch_size,
+        sampler=sampler_u,
+        **loader_args,
     )
 
     train_loader = ZipCycle([train_s_loader, train_u_loader], align="max")
 
-    return None, train_loader, val_loader
+    return None, train_loader, val_loader, None
 
 
 def dct(
-    dataset_root,
-    supervised_ratio: float = 0.1,
+    dataset_root: str,
     batch_size: int = 100,
-    train_folds: tuple = (1, 2, 3, 4, 5, 6, 7, 8, 9),
-    val_folds: tuple = (10,),
-    train_transform: Module = None,
-    val_transform: Module = None,
-    augmentation: str = None,
+    download: Any = None,
     num_workers: int = 0,
     pin_memory: bool = False,
-    verbose=1,
-    **kwargs,
-):
-
-    use_cache = True
-    if augmentation is not None:
-        use_cache = False
-        print("Augmentation are used, disabling transform cache ...")
+    supervised_ratio: float = 0.1,
+    train_folds: Union[Iterable[int], int, None] = (1, 2, 3, 4, 5, 6, 7, 8, 9),
+    train_transform_s: Optional[nn.Module] = None,
+    train_transform_u: Optional[nn.Module] = None,
+    use_cache: bool = False,
+    val_folds: Union[Iterable[int], int, None] = (10,),
+    val_transform: Optional[nn.Module] = None,
+    verbose: int = 1,
+) -> Tuple:
+    train_folds, val_folds = guess_folds(train_folds, val_folds, FOLDS, verbose)
 
     loader_args = {"num_workers": num_workers, "pin_memory": pin_memory}
 
@@ -197,50 +211,44 @@ def dct(
     val_dataset = UrbanSound8K(
         dataset_root, val_folds, transform=val_transform, cache=True
     )
-    val_loader = torch_data.DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=True, **loader_args
+    val_loader = DataLoader(
+        val_dataset, batch_size=batch_size, shuffle=False, **loader_args
     )
 
     # training subset
-    train_dataset = UrbanSound8K(
-        dataset_root, train_folds, transform=train_transform, cache=use_cache
+    train_dataset_s = UrbanSound8K(
+        dataset_root, train_folds, transform=train_transform_s, cache=use_cache
     )
+    train_dataset_u = copy.deepcopy(train_dataset_s)
+    train_dataset_u.transform = train_transform_u
 
     # Calc the size of the Supervised and Unsupervised batch
-    s_idx, u_idx = split_s_u(train_dataset, supervised_ratio)
+    s_idx, u_idx = split_s_u(train_dataset_s, supervised_ratio)
 
-    s_batch_size = int(np.floor(batch_size * supervised_ratio))
-    u_batch_size = int(np.ceil(batch_size * (1 - supervised_ratio)))
+    s_batch_size = int(math.floor(batch_size * supervised_ratio))
+    u_batch_size = int(math.ceil(batch_size * (1 - supervised_ratio)))
 
-    sampler_s1 = torch_data.SubsetRandomSampler(s_idx)
-    sampler_s2 = torch_data.SubsetRandomSampler(s_idx)
-    sampler_u = torch_data.SubsetRandomSampler(u_idx)
+    sampler_s1 = SubsetRandomSampler(s_idx)
+    sampler_s2 = SubsetRandomSampler(s_idx)
+    sampler_u = SubsetRandomSampler(u_idx)
 
-    train_loader_s1 = torch_data.DataLoader(
-        train_dataset, batch_size=s_batch_size, sampler=sampler_s1, **loader_args
+    train_loader_s1 = DataLoader(
+        train_dataset_s, batch_size=s_batch_size, sampler=sampler_s1, **loader_args
     )
-    train_loader_s2 = torch_data.DataLoader(
-        train_dataset, batch_size=s_batch_size, sampler=sampler_s2, **loader_args
+    train_loader_s2 = DataLoader(
+        train_dataset_s, batch_size=s_batch_size, sampler=sampler_s2, **loader_args
     )
-    train_loader_u = torch_data.DataLoader(
-        train_dataset, batch_size=u_batch_size, sampler=sampler_u, **loader_args
+    train_loader_u = DataLoader(
+        train_dataset_u, batch_size=u_batch_size, sampler=sampler_u, **loader_args
     )
     train_loader = ZipCycle([train_loader_s1, train_loader_s2, train_loader_u])
 
-    return None, train_loader, val_loader
+    return None, train_loader, val_loader, None
 
 
-def dct_uniloss(
-    dataset_root,
-    supervised_ratio: float = 0.1,
-    batch_size: int = 100,
-    train_folds: tuple = (1, 2, 3, 4, 5, 6, 7, 8, 9),
-    val_folds: tuple = (10,),
-    verbose=1,
-    **kwargs,
-):
-    pass
+def dct_uniloss(**kwargs):
+    raise NotImplementedError
 
 
 def fixmatch(**kwargs):
-    pass
+    raise NotImplementedError

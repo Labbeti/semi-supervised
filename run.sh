@@ -1,9 +1,31 @@
 #!/bin/bash
 
+function get_skip_params() {
+    if [ "$1" = "usage" ]; then
+        echo "Usage: $0 NB_SKIP [PARAMS]"
+        exit 0
+    fi
+
+    nb_skip_params=$(expr $1 + 1)
+    it=0
+    script_params=""
+
+    for arg in "$@"
+    do
+        if [ $it -ge ${nb_skip_params} ]; then
+            script_params="${script_params} ${arg}"
+        fi
+        it=$(expr $it + 1)
+    done
+
+    echo "${script_params}"
+    return 0
+}
+
 # --- PARAMS
-job_name="SSL-MT"
-fname_script="standalone/mean-teacher/mean-teacher.py"
-script_params="$@"
+job_name="$1"
+fname_script="standalone/$1/$1.py"
+script_params=`./get_skip_params.sh 1 $@`
 
 cpus=4
 dataset="GSC"

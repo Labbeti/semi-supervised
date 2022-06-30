@@ -7,39 +7,44 @@ os.environ["MKL_NUM_THREADS"] = "2"
 os.environ["NUMEXPR_NU M_THREADS"] = "2"
 os.environ["OMP_NUM_THREADS"] = "2"
 
+import os.path as osp
 import time
+
+from typing import Any, Dict, Union
 
 import hydra
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import yaml
 
 from omegaconf import DictConfig, OmegaConf
+from torch import Tensor
 from torchsummary import summary
 
-from metric_utils.metrics import CategoricalAccuracy, FScore, ContinueAverage
+from metric_utils.metrics import ContinueAverage, CategoricalAccuracy, FScore, Metrics
 from SSL.loss.losses import JensenShanon
 from SSL.ramps import Warmup, sigmoid_rampup
+from SSL.util.checkpoint import CheckPoint, mSummaryWriter
 from SSL.util.loaders import (
+    load_callbacks,
     load_dataset,
     load_optimizer,
-    load_callbacks,
     load_preprocesser,
 )
-from SSL.util.model_loader import load_model
-from SSL.util.checkpoint import CheckPoint, mSummaryWriter
 from SSL.util.mixup import MixUpBatchShuffle
+from SSL.util.model_loader import load_model
 from SSL.util.utils import (
-    reset_seed,
-    get_datetime,
     DotDict,
-    track_maximum,
+    get_datetime,
     get_lr,
     get_training_printers,
+    reset_seed,
+    track_maximum,
 )
 
 
-@hydra.main(config_path="../../config/mean-teacher/", config_name="ubs8k.yaml")
+@hydra.main(config_path=osp.join("..", "..", "config", "mean-teacher"), config_name="gsc")
 def run(cfg: DictConfig) -> None:
     # keep the file directory as the current working directory
     os.chdir(hydra.utils.get_original_cwd())
@@ -59,7 +64,7 @@ def run(cfg: DictConfig) -> None:
     has_same_trans = cfg.stu_aug == cfg.tea_aug
 
     # -------- Get the dataset --------
-    _manager, train_loader, val_loader = load_dataset(
+    _manager, train_loader, val_loader, test_loader = load_dataset(
         cfg.dataset.dataset,
         "mean-teacher",
         dataset_root=cfg.path.dataset_root,
@@ -74,6 +79,7 @@ def run(cfg: DictConfig) -> None:
         num_workers=cfg.hardware.nb_cpu,
         pin_memory=True,
         verbose=1,
+        download=cfg.download,
     )
 
     if has_same_trans:
@@ -84,18 +90,28 @@ def run(cfg: DictConfig) -> None:
 
     # -------- Prepare the model --------
     torch.cuda.empty_cache()  # type: ignore
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model_func = load_model(cfg.dataset.dataset, cfg.model.model)
 
     student = model_func(input_shape=input_shape, num_classes=cfg.dataset.num_classes)
     teacher = model_func(input_shape=input_shape, num_classes=cfg.dataset.num_classes)
 
+    if cfg.resume is not None:
+        if not os.path.isfile(cfg.resume):
+            raise ValueError(f"Invalid argument path {cfg.resume=}.")
+
+        data = torch.load(cfg.resume, map_location=torch.device("cpu"))
+        student_params, teacher_params = data["state_dict"]
+        student.load_state_dict(student_params)
+        teacher.load_state_dict(teacher_params)
+
     # We do not need gradient for the teacher model
     for p in teacher.parameters():
         p.detach_()
 
-    student = student.cuda()
-    teacher = teacher.cuda()
+    student = student.to(device)
+    teacher = teacher.to(device)
 
     if cfg.hardware.nb_gpu > 1:
         student = nn.parallel.DataParallel(student)
@@ -129,7 +145,7 @@ def run(cfg: DictConfig) -> None:
             sufix_title += "-label"
         sufix_title += f"-{cfg.mixup.alpha}-a"
 
-    sufix_title += cfg.tag
+    sufix_title += f"_{cfg.tag}"
 
     # -------- Tensorboard logging --------
     tensorboard_title = f"{get_datetime()}_{cfg.model.model}_{sufix_title}"
@@ -170,7 +186,10 @@ def run(cfg: DictConfig) -> None:
     checkpoint_title = f"{cfg.model.model}_{sufix_title}"
     checkpoint_path = f"{cfg.path.checkpoint_path}/{checkpoint_title}"
     checkpoint = CheckPoint(
-        [student, teacher], optimizer, mode="max", name=checkpoint_path
+        [student, teacher],
+        optimizer,
+        mode="max",
+        name=checkpoint_path,
     )
 
     # -------- Metrics and print formater --------
@@ -202,44 +221,50 @@ def run(cfg: DictConfig) -> None:
         }
     )
 
-    def reset_metrics(metrics: dict):
+    def reset_metrics(metrics: Dict[Any, Union[Metrics, Dict]]) -> None:
         for k, v in metrics.items():
             if isinstance(v, dict):
                 reset_metrics(v)
-
             else:
                 v.reset()
 
     maximum_tracker = track_maximum()
 
-    header, train_formater, val_formater = get_training_printers(
-        metrics.avg, metrics.sup
+    header, train_formater, val_formater, test_formater = get_training_printers(
+        metrics.avg, metrics.sup  # type: ignore
     )
 
     # -------- Training and Validation function --------
     # use softmax or not
-    softmax_fn = nn.Identity()
     if cfg.mt.use_softmax:
-        softmax_fn = nn.Softmax(dim=1)
+        ccost_activation = nn.Softmax(dim=1)
+    else:
+        ccost_activation = nn.Identity()
 
     # update the teacher using exponentiel moving average
     def update_teacher_model(
-        student_model: nn.Module, teacher_model: nn.Module, alpha: float, epoch: int
+        student_model: nn.Module,
+        teacher_model: nn.Module,
+        alpha: float,
+        epoch: int,
     ) -> None:
         # Use the true average until the exponential average is more correct
         alpha = min(1 - 1 / (epoch + 1), alpha)
 
         for param, ema_param in zip(
-            student_model.parameters(), teacher_model.parameters()
+            student_model.parameters(),
+            teacher_model.parameters(),
         ):
             ema_param.data.mul_(alpha).add_(param.data, alpha=1 - alpha)
 
     # For applying mixup
     mixup_fn = MixUpBatchShuffle(
-        alpha=cfg.mixup.alpha, apply_max=cfg.mixup.max, mix_labels=cfg.mixup.label,
+        alpha=cfg.mixup.alpha,
+        apply_max=cfg.mixup.max,
+        mix_labels=cfg.mixup.label,
     )
 
-    def train(epoch):
+    def train(epoch: int) -> None:
         start_time = time.time()
         print("")
 
@@ -258,20 +283,19 @@ def run(cfg: DictConfig) -> None:
                 tea_x_u = x_u
             else:
                 (stu_x_s, y_s), (tea_x_s, _) = batch_s
-                (stu_x_u, y_u), (tea_x_u, _) = batch_s
+                (stu_x_u, y_u), (tea_x_u, _) = batch_u
 
             # Apply mixup if needed, otherwise no mixup.
-            tea_x_s, tea_x_u = tea_x_s, tea_x_u
             if cfg.mixup.use:
                 tea_x_s, _ = mixup_fn(tea_x_s, y_s)
                 tea_x_u, _ = mixup_fn(tea_x_u, y_u)
 
-            stu_x_s = stu_x_s.cuda().float()
-            stu_x_u = stu_x_u.cuda().float()
-            tea_x_s = tea_x_s.cuda().float()
-            tea_x_u = tea_x_u.cuda().float()
-            y_s = y_s.cuda()
-            y_u = y_u.cuda()
+            stu_x_s = stu_x_s.to(device).float()
+            stu_x_u = stu_x_u.to(device).float()
+            tea_x_s = tea_x_s.to(device).float()
+            tea_x_u = tea_x_u.to(device).float()
+            y_s = y_s.to(device)
+            y_u = y_u.to(device)
 
             # Predictions
             student_s_logits = student(stu_x_s)
@@ -286,7 +310,7 @@ def run(cfg: DictConfig) -> None:
             student_logits = torch.cat((student_s_logits, student_u_logits), dim=0)
             teacher_logits = torch.cat((teacher_s_logits, teacher_u_logits), dim=0)
             ccost = consistency_cost(
-                softmax_fn(student_logits), softmax_fn(teacher_logits)
+                ccost_activation(student_logits), ccost_activation(teacher_logits)
             )
 
             total_loss = loss + lambda_cost() * ccost
@@ -295,9 +319,9 @@ def run(cfg: DictConfig) -> None:
             total_loss.backward()
             optimizer.step()
 
-            with torch.set_grad_enabled(False):
+            with torch.no_grad():
                 # Teacher prediction (for metrics purpose)
-                _teacher_loss = loss_ce(teacher_s_logits, y_s)
+                teacher_loss = loss_ce(teacher_s_logits, y_s)
 
                 # Update teacher
                 update_teacher_model(
@@ -337,7 +361,7 @@ def run(cfg: DictConfig) -> None:
 
                 # Running average of the two losses
                 sce_avg = metrics.avg.sce(loss.item()).mean(size=None)
-                tce_avg = metrics.avg.tce(_teacher_loss.item()).mean(size=None)
+                tce_avg = metrics.avg.tce(teacher_loss.item()).mean(size=None)
                 ccost_avg = metrics.avg.ccost(ccost.item()).mean(size=None)
 
                 # logs
@@ -357,6 +381,9 @@ def run(cfg: DictConfig) -> None:
                     ),
                     end="\r",
                 )
+            
+            # TODO : rem
+            break
 
         tensorboard.add_scalar("train/student_acc_s", acc_ss, epoch)
         tensorboard.add_scalar("train/student_acc_u", acc_su, epoch)
@@ -372,17 +399,18 @@ def run(cfg: DictConfig) -> None:
         tensorboard.add_scalar("train/teacher_loss", tce_avg, epoch)
         tensorboard.add_scalar("train/consistency_cost", ccost_avg, epoch)
 
-    def val(epoch):
+    def val(epoch: int) -> None:
+        prefix = "val"
         start_time = time.time()
         print("")
         nb_batch = len(val_loader)
         reset_metrics(metrics)
         student.eval()
 
-        with torch.set_grad_enabled(False):
+        with torch.no_grad():
             for i, (X, y) in enumerate(val_loader):
-                X = X.cuda().float()
-                y = y.cuda()
+                X = X.to(device).float()
+                y = y.to(device)
 
                 # Predictions
                 student_logits = student(X)
@@ -390,9 +418,9 @@ def run(cfg: DictConfig) -> None:
 
                 # Calculate supervised loss (only student on S)
                 loss = loss_ce(student_logits, y)
-                _teacher_loss = loss_ce(teacher_logits, y)  # for metrics only
+                teacher_loss = loss_ce(teacher_logits, y)  # for metrics only
                 ccost = consistency_cost(
-                    softmax_fn(student_logits), softmax_fn(teacher_logits)
+                    ccost_activation(student_logits), ccost_activation(teacher_logits)
                 )
 
                 # Compute the metrics
@@ -413,7 +441,7 @@ def run(cfg: DictConfig) -> None:
 
                 # Running average of the two losses
                 sce_avg = metrics.avg.sce(loss.item()).mean(size=None)
-                tce_avg = metrics.avg.tce(_teacher_loss.item()).mean(size=None)
+                tce_avg = metrics.avg.tce(teacher_loss.item()).mean(size=None)
                 ccost_avg = metrics.avg.ccost(ccost.item()).mean(size=None)
 
                 # logs
@@ -434,35 +462,115 @@ def run(cfg: DictConfig) -> None:
                     end="\r",
                 )
 
-        tensorboard.add_scalar("val/student_acc", acc_s, epoch)
-        tensorboard.add_scalar("val/student_f1", fscore_s, epoch)
-        tensorboard.add_scalar("val/teacher_acc", acc_t, epoch)
-        tensorboard.add_scalar("val/teacher_f1", fscore_t, epoch)
-        tensorboard.add_scalar("val/student_loss", sce_avg, epoch)
-        tensorboard.add_scalar("val/teacher_loss", tce_avg, epoch)
-        tensorboard.add_scalar("val/consistency_cost", ccost_avg, epoch)
+        tensorboard.add_scalar(f"{prefix}/student_acc", acc_s, epoch)
+        tensorboard.add_scalar(f"{prefix}/student_f1", fscore_s, epoch)
+        tensorboard.add_scalar(f"{prefix}/teacher_acc", acc_t, epoch)
+        tensorboard.add_scalar(f"{prefix}/teacher_f1", fscore_t, epoch)
+        tensorboard.add_scalar(f"{prefix}/student_loss", sce_avg, epoch)
+        tensorboard.add_scalar(f"{prefix}/teacher_loss", tce_avg, epoch)
+        tensorboard.add_scalar(f"{prefix}/consistency_cost", ccost_avg, epoch)
 
         tensorboard.add_scalar(
-            "hyperparameters/learning_rate", get_lr(optimizer), epoch
+            "hparams/learning_rate", get_lr(optimizer), epoch
         )
-        tensorboard.add_scalar("hyperparameters/lambda_cost_max", lambda_cost(), epoch)
+        tensorboard.add_scalar("hparams/lambda_cost_max", lambda_cost(), epoch)
 
         tensorboard.add_scalar(
-            "max/student_acc", maximum_tracker("student_acc", acc_s), epoch
+            f"{prefix}_max/student_acc", maximum_tracker(f"{prefix}/student_acc", acc_s), epoch
         )
         tensorboard.add_scalar(
-            "max/teacher_acc", maximum_tracker("teacher_acc", acc_t), epoch
+            f"{prefix}_max/teacher_acc", maximum_tracker(f"{prefix}/teacher_acc", acc_t), epoch
         )
         tensorboard.add_scalar(
-            "max/student_f1", maximum_tracker("student_f1", fscore_s), epoch
+            f"{prefix}_max/student_f1", maximum_tracker(f"{prefix}/student_f1", fscore_s), epoch
         )
         tensorboard.add_scalar(
-            "max/teacher_f1", maximum_tracker("teacher_f1", fscore_t), epoch
+            f"{prefix}_max/teacher_f1", maximum_tracker(f"{prefix}/teacher_f1", fscore_t), epoch
         )
 
         checkpoint.step(acc_t)
         for c in callbacks:
             c.step()
+
+    def test(epoch: int) -> None:
+        if test_loader is None:
+            return None
+
+        prefix = "test"
+        start_time = time.time()
+        print("")
+        nb_batch = len(test_loader)
+        reset_metrics(metrics)
+        student.eval()
+        teacher.eval()
+
+        with torch.no_grad():
+            for i, (X, y) in enumerate(test_loader):
+                X = X.to(device=device).float()
+                y = y.to(device=device)
+
+                # Predictions
+                student_logits = student(X)
+                teacher_logits = teacher(X)
+
+                # Calculate supervised loss (only student on S)
+                loss = loss_ce(student_logits, y)
+                teacher_loss = loss_ce(teacher_logits, y)  # for metrics only
+                ccost = consistency_cost(
+                    ccost_activation(student_logits), ccost_activation(teacher_logits)
+                )
+
+                # Compute the metrics
+                y_onehot = F.one_hot(y, num_classes=cfg.dataset.num_classes)
+
+                acc_s = metrics.sup.acc_s(torch.argmax(student_logits, dim=1), y).mean(
+                    size=None
+                )
+                acc_t = metrics.sup.acc_t(torch.argmax(teacher_logits, dim=1), y).mean(
+                    size=None
+                )
+                fscore_s = metrics.sup.fscore_s(
+                    torch.softmax(student_logits, dim=1), y_onehot
+                ).mean(size=None)
+                fscore_t = metrics.sup.fscore_t(
+                    torch.softmax(teacher_logits, dim=1), y_onehot
+                ).mean(size=None)
+
+                # Running average of the two losses
+                sce_avg = metrics.avg.sce(loss.item()).mean(size=None)
+                tce_avg = metrics.avg.tce(teacher_loss.item()).mean(size=None)
+                ccost_avg = metrics.avg.ccost(ccost.item()).mean(size=None)
+
+                # logs
+                print(
+                    test_formater.format(
+                        epoch + 1,
+                        i,
+                        nb_batch,
+                        sce_avg,
+                        tce_avg,
+                        ccost_avg,
+                        acc_s,
+                        acc_t,
+                        fscore_s,
+                        fscore_t,
+                        time.time() - start_time,
+                    ),
+                    end="\r",
+                )
+
+        tensorboard.add_scalar(f"{prefix}/student_acc", acc_s, epoch)
+        tensorboard.add_scalar(f"{prefix}/student_f1", fscore_s, epoch)
+        tensorboard.add_scalar(f"{prefix}/teacher_acc", acc_t, epoch)
+        tensorboard.add_scalar(f"{prefix}/teacher_f1", fscore_t, epoch)
+        tensorboard.add_scalar(f"{prefix}/student_loss", sce_avg, epoch)
+        tensorboard.add_scalar(f"{prefix}/teacher_loss", tce_avg, epoch)
+        tensorboard.add_scalar(f"{prefix}/consistency_cost", ccost_avg, epoch)
+
+        maximum_tracker(f"{prefix}/student_acc", acc_s)
+        maximum_tracker(f"{prefix}/student_f1", fscore_s)
+        maximum_tracker(f"{prefix}/teacher_acc", acc_t)
+        maximum_tracker(f"{prefix}/teacher_f1", fscore_t)
 
     # -------- Training loop --------
     print(header)
@@ -476,8 +584,15 @@ def run(cfg: DictConfig) -> None:
     for e in range(start_epoch, end_epoch):
         train(e)
         val(e)
-
         tensorboard.flush()
+    print()
+
+    if test_loader is not None:
+        best_epoch = checkpoint.best_state["epoch"]
+        print(f"Loading best model for testing... ({best_epoch=})\n")
+        checkpoint.load_best()
+        test(best_epoch)
+        print()
 
     # -------- Save the hyper parameters and the metrics --------
     hparams = {
@@ -502,12 +617,20 @@ def run(cfg: DictConfig) -> None:
     # convert all value to str
     hparams = dict(zip(hparams.keys(), map(str, hparams.values())))
 
-    final_metrics = {
-        "max_acc_student": maximum_tracker.max["student_acc"],
-        "max_f1_student": maximum_tracker.max["student_f1"],
-        "max_acc_teacher": maximum_tracker.max["teacher_acc"],
-        "max_f1_teacher": maximum_tracker.max["teacher_f1"],
-    }
+    prefixes = ["val"]
+    if test_loader is not None:
+        prefixes.append("test")
+    metric_names = ("student_acc", "teacher_acc", "student_f1", "teacher_f1")
+
+    final_metrics = {}
+    for prefix in prefixes:
+        for metric_name in metric_names:
+            final_metrics[f"{prefix}_max/{metric_name}"] = maximum_tracker.max[f"{prefix}/{metric_name}"]
+    final_metrics = {k: v.tolist() if isinstance(v, Tensor) else v for k, v in final_metrics.items()}
+
+    print()
+    print("Scores:")
+    print(yaml.dump(final_metrics, sort_keys=False))
 
     tensorboard.add_hparams(hparams, final_metrics)
 

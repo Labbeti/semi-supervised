@@ -1,43 +1,52 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import os
 
 os.environ["MKL_NUM_THREADS"] = "2"
 os.environ["NUMEXPR_NU M_THREADS"] = "2"
 os.environ["OMP_NUM_THREADS"] = "2"
-import time
-import numpy as np
-import torch
-import torch.nn as nn
-from torch.cuda.amp import autocast
-from torch.nn.parallel import DataParallel
 
-# from torch.utils.tensorboard import SummaryWriter
+import math
+import os.path as osp
+import time
+
+from typing import Any, Dict, Tuple
+
+import hydra
+import torch
+import yaml
+
 from advertorch.attacks import GradientSignAttack
-from metric_utils.metrics import CategoricalAccuracy, FScore, ContinueAverage, Ratio
+from omegaconf import DictConfig, OmegaConf
+from torch import nn, Tensor
+from torch.cuda.amp.autocast_mode import autocast
+from torch.nn.parallel import DataParallel
+from torchsummary import summary
+
+from metric_utils.metrics import ContinueAverage, CategoricalAccuracy, FScore, Ratio
+from SSL.loss import loss_cot, loss_diff, loss_sup
+from SSL.ramps import Warmup, sigmoid_rampup
 from SSL.util.checkpoint import CheckPoint, mSummaryWriter
-from SSL.util.utils import (
-    reset_seed,
-    get_datetime,
-    track_maximum,
-    get_lr,
-    get_train_format,
-)
-from SSL.util.model_loader import load_model
 from SSL.util.loaders import (
+    load_callbacks,
     load_dataset,
     load_optimizer,
-    load_callbacks,
     load_preprocesser,
 )
 from SSL.util.mixup import MixUpBatchShuffle
-from SSL.ramps import Warmup, sigmoid_rampup
-from SSL.loss import loss_cot, loss_diff, loss_sup
-from torchsummary import summary
-import hydra
-from omegaconf import DictConfig, OmegaConf
+from SSL.util.model_loader import load_model
+from SSL.util.utils import (
+    get_datetime,
+    get_lr,
+    get_train_format,
+    reset_seed,
+    track_maximum,
+)
 
 
-@hydra.main(config_name="../../config/deep-co-training/ubs8k.yaml")
-def run(cfg: DictConfig) -> DictConfig:
+@hydra.main(config_path=osp.join("..", "..", "config", "deep-co-training"), config_name="gsc")
+def run(cfg: DictConfig) -> None:
     # keep the file directory as the current working directory
     os.chdir(hydra.utils.get_original_cwd())
 
@@ -47,10 +56,11 @@ def run(cfg: DictConfig) -> DictConfig:
     reset_seed(cfg.train_param.seed)
 
     # -------- Get the pre-processer --------
-    train_transform, val_transform = load_preprocesser(cfg.dataset.dataset, "dct")
+    train_transform_s, val_transform = load_preprocesser(cfg.dataset.dataset, "dct", aug_cfg=cfg.aug_s)
+    train_transform_u, _ = load_preprocesser(cfg.dataset.dataset, "dct", aug_cfg=cfg.aug_u)
 
     # -------- Get the dataset --------
-    manager, train_loader, val_loader = load_dataset(
+    manager, train_loader, val_loader, test_loader = load_dataset(
         cfg.dataset.dataset,
         "dct",
         dataset_root=cfg.path.dataset_root,
@@ -58,11 +68,13 @@ def run(cfg: DictConfig) -> DictConfig:
         batch_size=cfg.train_param.batch_size,
         train_folds=cfg.train_param.train_folds,
         val_folds=cfg.train_param.val_folds,
-        train_transform=train_transform,
+        train_transform_s=train_transform_s,
+        train_transform_u=train_transform_u,
         val_transform=val_transform,
         num_workers=cfg.hardware.nb_cpu,
         pin_memory=True,
         verbose=1,
+        download=cfg.download,
     )
 
     # The input shape of the data is used to generate the model
@@ -70,19 +82,30 @@ def run(cfg: DictConfig) -> DictConfig:
 
     # -------- Prepare the model --------
     torch.cuda.empty_cache()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     model_func = load_model(cfg.dataset.dataset, cfg.model.model)
 
-    commun_args = dict(
+    common_args = dict(
         manager=manager,
         num_classes=cfg.dataset.num_classes,
         input_shape=list(input_shape),
     )
 
-    m1 = model_func(**commun_args)
-    m2 = model_func(**commun_args)
+    m1 = model_func(**common_args)
+    m2 = model_func(**common_args)
 
-    m1 = m1.cuda()
-    m2 = m2.cuda()
+    if cfg.resume is not None:
+        if not os.path.isfile(cfg.resume):
+            raise ValueError(f"Invalid argument path {cfg.resume=}.")
+
+        data = torch.load(cfg.resume, map_location=torch.device("cpu"))
+        m1_params, m2_params = data["state_dict"]
+        m1.load_state_dict(m1_params)
+        m2.load_state_dict(m2_params)
+
+    m1 = m1.to(device)
+    m2 = m2.to(device)
 
     if cfg.hardware.nb_gpu > 1:
         m1 = DataParallel(m1)
@@ -114,6 +137,8 @@ def run(cfg: DictConfig) -> DictConfig:
             sufix_title += "-label"
         sufix_title += f"-{cfg.mixup.alpha}-a"
 
+    sufix_title += f"_{cfg.tag}"
+
     # -------- Tensorboard logging --------
     tensorboard_title = f"{get_datetime()}_{cfg.model.model}_{sufix_title}"
     log_dir = f"{cfg.path.tensorboard_path}/{tensorboard_title}"
@@ -135,7 +160,6 @@ def run(cfg: DictConfig) -> DictConfig:
         optimizer=optimizer,
         nb_epoch=cfg.train_param.nb_epoch,
     )
-    # loss are in SSL/losses.py
 
     # Checkpoint
     checkpoint_title = f"{cfg.model.model}_{sufix_title}"
@@ -152,8 +176,8 @@ def run(cfg: DictConfig) -> DictConfig:
         m1,
         loss_fn=nn.CrossEntropyLoss(reduction="sum"),
         eps=cfg.dct.epsilon,
-        clip_min=-np.inf,
-        clip_max=np.inf,
+        clip_min=-math.inf,
+        clip_max=math.inf,
         targeted=False,
     )
 
@@ -161,13 +185,13 @@ def run(cfg: DictConfig) -> DictConfig:
         m2,
         loss_fn=nn.CrossEntropyLoss(reduction="sum"),
         eps=cfg.dct.epsilon,
-        clip_min=-np.inf,
-        clip_max=np.inf,
+        clip_min=-math.inf,
+        clip_max=math.inf,
         targeted=False,
     )
 
     # -------- Metrics and print formater --------
-    metrics_fn = dict(
+    metrics_fn: Dict[str, Any] = dict(
         ratio_s=[Ratio(), Ratio()],
         ratio_u=[Ratio(), Ratio()],
         acc_s=[CategoricalAccuracy(), CategoricalAccuracy()],
@@ -180,7 +204,7 @@ def run(cfg: DictConfig) -> DictConfig:
         avg_diff=ContinueAverage(),
     )
 
-    def reset_metrics():
+    def reset_metrics() -> None:
         for item in metrics_fn.values():
             if isinstance(item, list):
                 for f in item:
@@ -197,7 +221,8 @@ def run(cfg: DictConfig) -> DictConfig:
         alpha=cfg.mixup.alpha, apply_max=cfg.mixup.max, mix_labels=cfg.mixup.label
     )
 
-    def train(epoch):
+    def train(epoch: int) -> float:
+        prefix = "train"
         start_time = time.time()
         print("")
 
@@ -205,7 +230,9 @@ def run(cfg: DictConfig) -> DictConfig:
         m1.train()
         m2.train()
 
-        for batch, (S1, S2, U) in enumerate(train_loader):
+        total_loss = torch.as_tensor(-1.0)
+
+        for batch_idx, (S1, S2, U) in enumerate(train_loader):
             x_s1, y_s1 = S1
             x_s2, y_s2 = S2
             x_u, y_u = U
@@ -214,8 +241,8 @@ def run(cfg: DictConfig) -> DictConfig:
             if cfg.mixup.use:
                 x_u, y_u = mixup_u_fn(x_u, y_u)
 
-            x_s1, x_s2, x_u = x_s1.cuda(), x_s2.cuda(), x_u.cuda()
-            y_s1, y_s2, y_u = y_s1.cuda(), y_s2.cuda(), y_u.cuda()
+            x_s1, x_s2, x_u = x_s1.to(device), x_s2.to(device), x_u.to(device)
+            y_s1, y_s2, y_u = y_s1.to(device), y_s2.to(device), y_u.to(device)
 
             with autocast():
                 logits_s1 = m1(x_s1)
@@ -279,7 +306,7 @@ def run(cfg: DictConfig) -> DictConfig:
             optimizer.step()
 
             # ======== Calc the metrics ========
-            with torch.set_grad_enabled(False):
+            with torch.no_grad():
                 # accuracies ----
                 pred_s1 = torch.argmax(logits_s1, dim=1)
                 pred_s2 = torch.argmax(logits_s2, dim=1)
@@ -311,7 +338,7 @@ def run(cfg: DictConfig) -> DictConfig:
                     train_formater.format(
                         "Training: ",
                         epoch + 1,
-                        int(100 * (batch + 1) / len(train_loader)),
+                        int(100 * (batch_idx + 1) / len(train_loader)),
                         "",
                         avg_sup.mean(size=None),
                         avg_cot.mean(size=None),
@@ -325,13 +352,16 @@ def run(cfg: DictConfig) -> DictConfig:
                     end="\r",
                 )
 
+                # TODO : rem
+                break
+
         # Using tensorboard to monitor loss and acc\n",
-        tensorboard.add_scalar("train/total_loss", avg_total.mean(size=None), epoch)
-        tensorboard.add_scalar("train/Lsup", avg_sup.mean(size=None), epoch)
-        tensorboard.add_scalar("train/Lcot", avg_cot.mean(size=None), epoch)
-        tensorboard.add_scalar("train/Ldiff", avg_diff.mean(size=None), epoch)
-        tensorboard.add_scalar("train/acc_1", acc_s1.mean(size=None), epoch)
-        tensorboard.add_scalar("train/acc_2", acc_s2.mean(size=None), epoch)
+        tensorboard.add_scalar(f"{prefix}/total_loss", avg_total.mean(size=None), epoch)
+        tensorboard.add_scalar(f"{prefix}/Lsup", avg_sup.mean(size=None), epoch)
+        tensorboard.add_scalar(f"{prefix}/Lcot", avg_cot.mean(size=None), epoch)
+        tensorboard.add_scalar(f"{prefix}/Ldiff", avg_diff.mean(size=None), epoch)
+        tensorboard.add_scalar(f"{prefix}/m1_acc", acc_s1.mean(size=None), epoch)
+        tensorboard.add_scalar(f"{prefix}/m2_acc", acc_s2.mean(size=None), epoch)
 
         tensorboard.add_scalar("detail_acc/acc_s1", acc_s1.mean(size=None), epoch)
         tensorboard.add_scalar("detail_acc/acc_s2", acc_s2.mean(size=None), epoch)
@@ -346,18 +376,19 @@ def run(cfg: DictConfig) -> DictConfig:
         # Return the total loss to check for NaN
         return total_loss.item()
 
-    def val(epoch):
+    def val(epoch: int) -> Tuple:
+        prefix = "val"
         start_time = time.time()
-        print("")
+        print()
 
         reset_metrics()
         m1.eval()
         m2.eval()
 
-        with torch.set_grad_enabled(False):
-            for batch, (X, y) in enumerate(val_loader):
-                x = X.cuda()
-                y = y.cuda()
+        with torch.no_grad():
+            for batch_idx, (X, y) in enumerate(val_loader):
+                x = X.to(device)
+                y = y.to(device)
 
                 with autocast():
                     logits_1 = m1(x)
@@ -371,69 +402,137 @@ def run(cfg: DictConfig) -> DictConfig:
                 pred_1 = torch.argmax(logits_1, dim=1)
                 pred_2 = torch.argmax(logits_2, dim=1)
 
-                acc_1 = metrics_fn["acc_s"][0](pred_1, y)
-                acc_2 = metrics_fn["acc_s"][1](pred_2, y)
-
-                avg_sup = metrics_fn["avg_sup"](l_sup.item())
+                cont_m1_acc = metrics_fn["acc_s"][0](pred_1, y)
+                cont_m2_acc = metrics_fn["acc_s"][1](pred_2, y)
+                cont_avg_sup = metrics_fn["avg_sup"](l_sup.item())
 
                 # logs
                 print(
                     val_formater.format(
                         "Validation: ",
                         epoch + 1,
-                        int(100 * (batch + 1) / len(train_loader)),
+                        int(100 * (batch_idx + 1) / len(val_loader)),
                         "",
-                        avg_sup.mean(size=None),
+                        cont_avg_sup.mean(size=None),
                         0.0,
                         0.0,
-                        avg_sup.mean(size=None),
+                        cont_avg_sup.mean(size=None),
                         "",
-                        acc_1.mean(size=None),
+                        cont_m1_acc.mean(size=None),
                         0.0,
                         time.time() - start_time,
                     ),
                     end="\r",
                 )
 
-        tensorboard.add_scalar("val/acc_1", acc_1.mean(size=None), epoch)
-        tensorboard.add_scalar("val/acc_2", acc_2.mean(size=None), epoch)
+        m1_acc = cont_m1_acc.mean(size=None)
+        m2_acc = cont_m2_acc.mean(size=None)
+
+        tensorboard.add_scalar(f"{prefix}/m1_acc", m1_acc, epoch)
+        tensorboard.add_scalar(f"{prefix}/m2_acc", m2_acc, epoch)
 
         tensorboard.add_scalar(
-            "max/acc_1", maximum_tracker("acc_1", acc_1.mean(size=None)), epoch
+            f"{prefix}_max/m1_acc", maximum_tracker(f"{prefix}/m1_acc", m1_acc), epoch
         )
         tensorboard.add_scalar(
-            "max/acc_2", maximum_tracker("acc_2", acc_2.mean(size=None)), epoch
+            f"{prefix}_max/m2_acc", maximum_tracker(f"{prefix}/m2_acc", m2_acc), epoch
         )
 
-        tensorboard.add_scalar("detail_hyperparameters/lambda_cot", lambda_cot(), epoch)
+        tensorboard.add_scalar("hparams/lambda_cot", lambda_cot(), epoch)
         tensorboard.add_scalar(
-            "detail_hyperparameters/lambda_diff", lambda_diff(), epoch
+            "hparams/lambda_diff", lambda_diff(), epoch
         )
         tensorboard.add_scalar(
-            "detail_hyperparameters/learning_rate", get_lr(optimizer), epoch
+            "hparams/learning_rate", get_lr(optimizer), epoch
         )
 
-        return acc_1.mean(size=None), acc_2.mean(size=None)
+        return m1_acc, m2_acc
+
+    def test(epoch: int) -> None:
+        if test_loader is None:
+            return None
+
+        prefix = "test"
+        start_time = time.time()
+        print("")
+
+        reset_metrics()
+        m1.eval()
+        m2.eval()
+
+        with torch.no_grad():
+            for batch_idx, (X, y) in enumerate(test_loader):
+                x = X.to(device)
+                y = y.to(device)
+
+                with autocast():
+                    logits_1 = m1(x)
+                    logits_2 = m2(x)
+
+                    # losses ----
+                    l_sup = loss_sup(logits_1, logits_2, y, y)
+
+                # ======== Calc the metrics ========
+                # accuracies ----
+                pred_1 = torch.argmax(logits_1, dim=1)
+                pred_2 = torch.argmax(logits_2, dim=1)
+
+                cont_m1_acc = metrics_fn["acc_s"][0](pred_1, y)
+                cont_m2_acc = metrics_fn["acc_s"][1](pred_2, y)
+                cont_avg_sup = metrics_fn["avg_sup"](l_sup.item())
+
+                # logs
+                print(
+                    val_formater.format(
+                        "Testing: ",
+                        epoch + 1,
+                        int(100 * (batch_idx + 1) / len(train_loader)),
+                        "",
+                        cont_avg_sup.mean(size=None),
+                        0.0,
+                        0.0,
+                        cont_avg_sup.mean(size=None),
+                        "",
+                        cont_m1_acc.mean(size=None),
+                        0.0,
+                        time.time() - start_time,
+                    ),
+                    end="\r",
+                )
+
+        m1_acc = cont_m1_acc.mean(size=None)
+        m2_acc = cont_m2_acc.mean(size=None)
+
+        tensorboard.add_scalar(f"{prefix}/m1_acc", m1_acc, epoch)
+        tensorboard.add_scalar(f"{prefix}/m2_acc", m2_acc, epoch)
+
+        maximum_tracker(f"{prefix}/m1_acc", m1_acc)
+        maximum_tracker(f"{prefix}/m2_acc", m2_acc)
 
     # -------- Training loop ------
     print(header)
-
-    if cfg.train_param.resume:
-        checkpoint.load_last()
 
     start_epoch = checkpoint.epoch_counter
     end_epoch = cfg.train_param.nb_epoch
 
     for e in range(start_epoch, end_epoch):
         train(e)
-        acc_1, acc_2 = val(e)
+        m1_acc, m2_acc = val(e)
 
         # Apply callbacks
         for c in callbacks:
             c.step()
-        checkpoint.step(acc_1)
+        checkpoint.step(m1_acc)
 
         tensorboard.flush()
+    print()
+
+    if test_loader is not None:
+        best_epoch = checkpoint.best_state["epoch"]
+        print(f"Loading best model for testing... ({best_epoch=})\n")
+        checkpoint.load_best()
+        test(best_epoch)
+        print()
 
     # -------- Save the hyper parameters and the metrics --------
     hparams = {
@@ -441,7 +540,7 @@ def run(cfg: DictConfig) -> DictConfig:
         "model": cfg.model.model,
         "supervised_ratio": cfg.train_param.supervised_ratio,
         "batch_size": cfg.train_param.batch_size,
-        "nb_iteration": cfg.train_param.nb_iteration,
+        "nb_epoch": cfg.train_param.nb_epoch,
         "learning_rate": cfg.train_param.learning_rate,
         "seed": cfg.train_param.seed,
         "epsilon": cfg.dct.epsilon,
@@ -457,10 +556,20 @@ def run(cfg: DictConfig) -> DictConfig:
     # convert all value to str
     hparams = dict(zip(hparams.keys(), map(str, hparams.values())))
 
-    final_metrics = {
-        "max_acc_1": maximum_tracker.max["acc_1"],
-        "max_acc_2": maximum_tracker.max["acc_2"],
-    }
+    prefixes = ["val"]
+    if test_loader is not None:
+        prefixes.append("test")
+    metric_names = ("m1_acc", "m2_acc")
+
+    final_metrics = {}
+    for prefix in prefixes:
+        for metric_name in metric_names:
+            final_metrics[f"{prefix}_max/{metric_name}"] = maximum_tracker.max[f"{prefix}/{metric_name}"]
+    final_metrics = {k: v.tolist() if isinstance(v, Tensor) else v for k, v in final_metrics.items()}
+
+    print()
+    print("Scores:")
+    print(yaml.dump(final_metrics, sort_keys=False))
 
     tensorboard.add_hparams(hparams, final_metrics)
 

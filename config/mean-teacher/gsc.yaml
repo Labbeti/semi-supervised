@@ -15,7 +15,7 @@ hardware:
   nb_gpu: 1
 
 dataset:
-  dataset: speechcommand
+  dataset: gsc
   num_classes: 35
 
 model:
@@ -49,11 +49,12 @@ mixup:
   label: true
 
 path:
-  dataset_root: ../../datasets
-  checkpoint_root: ../../model_save
-  tensorboard_root: ../../tensorboard
+  dataset_root: datasets
+  checkpoint_root: model_save
+  tensorboard_root: tensorboard
   checkpoint_path: ${path.checkpoint_root}/${dataset.dataset}/mean-teacher
   tensorboard_path: ${path.tensorboard_root}/${dataset.dataset}/mean-teacher
 
-tag: ""
+tag: "NOTAG"
 resume: null
+download: false

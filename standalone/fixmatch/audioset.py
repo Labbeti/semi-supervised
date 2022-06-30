@@ -301,7 +301,7 @@ def run(cfg: DictConfig) -> DictConfig:
 
         model.eval()
 
-        with torch.set_grad_enabled(False):
+        with torch.no_grad():
             for i, (X, y) in enumerate(val_loader):
                 X = X.cuda().float()
                 y = y.cuda().float()

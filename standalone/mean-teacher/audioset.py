@@ -294,7 +294,7 @@ def run(cfg: DictConfig) -> None:
         total_loss.backward()
         optimizer.step()
 
-        with torch.set_grad_enabled(False):
+        with torch.no_grad():
             # Teacher prediction (for metrics purpose)
             _teacher_loss = loss_ce(teacher_s_logits, y_s)
 
@@ -367,7 +367,7 @@ def run(cfg: DictConfig) -> None:
         reset_metrics(metrics)
         student.eval()
 
-        with torch.set_grad_enabled(False):
+        with torch.no_grad():
             for i, (X, y) in enumerate(val_loader):
                 X = X.cuda().float()
                 y = y.cuda().float()

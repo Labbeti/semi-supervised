@@ -256,10 +256,10 @@ class Trainer:
         if self.dataset.lower() in ["esc10", "ubs8k"]:
             return 10
 
-        elif self.dataset.lower() in ["speechcommand"]:
+        elif self.dataset.lower() in ["speechcommand", "gsc"]:
             return 35
 
-        elif self.dataset.lower() in ["speechcommand10"]:
+        elif self.dataset.lower() in ["speechcommand10", "gsc10"]:
             return 12
 
         elif self.dataset.lower() in ["esc50"]:

@@ -233,7 +233,7 @@ class MeanTeacherTrainer(Trainer):
             total_loss.backward()
             self.optimizer.step()
 
-            with torch.set_grad_enabled(False):
+            with torch.no_grad():
                 # Teacher prediction (for metrics purpose)
                 _teacher_loss = self.loss_ce(ts_logits, y_s)
 
@@ -300,7 +300,7 @@ class MeanTeacherTrainer(Trainer):
         self.reset_metrics()
         self.student.eval()
 
-        with torch.set_grad_enabled(False):
+        with torch.no_grad():
             for i, (X, y) in enumerate(self.val_loader):
                 X = X.cuda()
                 y = y.cuda()
@@ -395,7 +395,7 @@ class MeanTeacherTrainer(Trainer):
         self, ss_logits, su_logits, ts_logits, tu_logits, y_s, y_u
     ) -> Union[DotDict, DotDict]:
 
-        with torch.set_grad_enabled(False):
+        with torch.no_grad():
             S = nn.Softmax(dim=1)
             A = lambda x: torch.argmax(x, dim=1)
             M = self.metrics

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from builtins import breakpoint
 import os
 
 os.environ["MKL_NUM_THREADS"] = "2"
@@ -38,7 +37,7 @@ from SSL.util.utils import (
 )
 
 
-@hydra.main(config_path="../../config/mean-teacher/", config_name="speechcommand.yaml")
+@hydra.main(config_path="../../config/mean-teacher/", config_name="gsc.yaml")
 def run(cfg: DictConfig) -> None:
     # keep the file directory as the current working directory
     os.chdir(hydra.utils.get_original_cwd())
@@ -72,7 +71,6 @@ def run(cfg: DictConfig) -> None:
         num_workers=cfg.hardware.nb_cpu,
         pin_memory=True,
         verbose=1,
-        return_test_loader=True,
     )
     print(f"Test dataset: {test_loader.dataset}")
     
@@ -219,7 +217,7 @@ def run(cfg: DictConfig) -> None:
         student.eval()
         teacher.eval()
 
-        with torch.set_grad_enabled(False):
+        with torch.no_grad():
             for i, (X, y) in enumerate(test_loader):
                 X = X.to(device=device).float()
                 y = y.to(device=device)

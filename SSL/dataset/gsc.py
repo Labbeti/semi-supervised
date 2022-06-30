@@ -18,7 +18,7 @@ from torchaudio.datasets.utils import (
 FOLDER_IN_ARCHIVE = "SpeechCommands"
 URL = "speech_commands_v0.02"
 HASH_DIVIDER = "_nohash_"
-EXCEPT_FOLDER = ["_background_noise_"]
+EXCEPT_FOLDERS = ["_background_noise_"]
 _CHECKSUMS = {
     "https://storage.googleapis.com/download.tensorflow.org/data/speech_commands_v0.01.tar.gz": "3cd23799cb2bbdec517f1cc028f8d43c",
     "https://storage.googleapis.com/download.tensorflow.org/data/speech_commands_v0.02.tar.gz": "6b74f3901214cb2c2934e98196829835",
@@ -38,6 +38,7 @@ class SPEECHCOMMANDS(Dataset):
         download: bool = False,
         transform: Optional[Module] = None,
     ) -> None:
+        super().__init__()
 
         if url in ["speech_commands_v0.01", "speech_commands_v0.02"]:
             base_url = "https://storage.googleapis.com/download.tensorflow.org/data/"
@@ -48,15 +49,12 @@ class SPEECHCOMMANDS(Dataset):
         self.root = root
         self.url = url
         self.transform = transform
-        print(f"print fron SPEECHCOMMANDS {self.transform}")
-
         self.basename = os.path.basename(url)
 
         basename = self.basename.rsplit(".", 2)[0]
         folder_in_archive = os.path.join(FOLDER_IN_ARCHIVE, basename)
 
         self._path = os.path.join(root, folder_in_archive)
-        print(self._path)
 
         if download:
             self._download()
@@ -82,7 +80,7 @@ class SPEECHCOMMANDS(Dataset):
         list_commands = [
             dir
             for dir in os.listdir(self._path)
-            if os.path.isdir(os.path.join(self._path, dir)) and dir not in EXCEPT_FOLDER
+            if os.path.isdir(os.path.join(self._path, dir)) and dir not in EXCEPT_FOLDERS
         ]
         list_commands.sort()
 
