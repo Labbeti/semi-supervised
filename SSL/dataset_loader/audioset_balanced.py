@@ -7,7 +7,10 @@ from SSL.dataset.audiosetDataset import get_supervised, get_fixmatch
 def supervised(
     dataset_root: str,
     rdcc_nbytes: int = 512 * 1024 ** 2,
-    data_shape: tuple = (64, 500,),
+    data_shape: tuple = (
+        64,
+        500,
+    ),
     data_key: str = "data",
     train_transform: Module = None,
     val_transform: Module = None,

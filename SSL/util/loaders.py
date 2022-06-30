@@ -70,7 +70,9 @@ def load_optimizer(dataset: str, framework: str, **kwargs) -> Optimizer:
     return load_helper(dataset, framework, dataset_mapper, **kwargs)
 
 
-def load_preprocesser(dataset: str, framework: str, **kwargs) -> Tuple[nn.Module, nn.Module]:
+def load_preprocesser(
+    dataset: str, framework: str, **kwargs
+) -> Tuple[nn.Module, nn.Module]:
     import SSL.preprocessing.esc as e
     import SSL.preprocessing.ubs8k as u
     import SSL.preprocessing.gsc as s
@@ -92,7 +94,9 @@ def load_preprocesser(dataset: str, framework: str, **kwargs) -> Tuple[nn.Module
     return load_helper(dataset, framework, dataset_mapper, **kwargs)
 
 
-def load_dataset(dataset: str, framework: str, **kwargs) -> Tuple[Any, ZipCycle, DataLoader, Optional[DataLoader]]:
+def load_dataset(
+    dataset: str, framework: str, **kwargs
+) -> Tuple[Any, ZipCycle, DataLoader, Optional[DataLoader]]:
     import SSL.dataset_loader.esc as e
     import SSL.dataset_loader.gsc as s
     import SSL.dataset_loader.ubs8k as u

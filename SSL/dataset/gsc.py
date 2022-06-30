@@ -80,7 +80,8 @@ class SPEECHCOMMANDS(Dataset):
         list_commands = [
             dir
             for dir in os.listdir(self._path)
-            if os.path.isdir(os.path.join(self._path, dir)) and dir not in EXCEPT_FOLDERS
+            if os.path.isdir(os.path.join(self._path, dir))
+            and dir not in EXCEPT_FOLDERS
         ]
         list_commands.sort()
 

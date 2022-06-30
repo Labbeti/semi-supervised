@@ -49,10 +49,14 @@ def run(cfg: DictConfig) -> None:
     method_name = "mean-teacher"
 
     student_transform, val_transform = load_preprocesser(
-        cfg.dataset.dataset, method_name, aug_cfg=cfg.stu_aug,
+        cfg.dataset.dataset,
+        method_name,
+        aug_cfg=cfg.stu_aug,
     )
     teacher_transform, _ = load_preprocesser(
-        cfg.dataset.dataset, method_name, aug_cfg=cfg.tea_aug,
+        cfg.dataset.dataset,
+        method_name,
+        aug_cfg=cfg.tea_aug,
     )
     has_same_trans = cfg.stu_aug == cfg.tea_aug
 
@@ -73,7 +77,7 @@ def run(cfg: DictConfig) -> None:
         verbose=1,
     )
     print(f"Test dataset: {test_loader.dataset}")
-    
+
     input_shape = tuple(test_loader.dataset[0][0].shape)
 
     # -------- Prepare the model --------

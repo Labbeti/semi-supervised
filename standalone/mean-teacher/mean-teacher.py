@@ -44,7 +44,9 @@ from SSL.util.utils import (
 )
 
 
-@hydra.main(config_path=osp.join("..", "..", "config", "mean-teacher"), config_name="gsc")
+@hydra.main(
+    config_path=osp.join("..", "..", "config", "mean-teacher"), config_name="gsc"
+)
 def run(cfg: DictConfig) -> None:
     # keep the file directory as the current working directory
     os.chdir(hydra.utils.get_original_cwd())
@@ -56,10 +58,14 @@ def run(cfg: DictConfig) -> None:
 
     # -------- Get the pre-processer --------
     student_transform, val_transform = load_preprocesser(
-        cfg.dataset.dataset, "mean-teacher", aug_cfg=cfg.stu_aug,
+        cfg.dataset.dataset,
+        "mean-teacher",
+        aug_cfg=cfg.stu_aug,
     )
     teacher_transform, _ = load_preprocesser(
-        cfg.dataset.dataset, "mean-teacher", aug_cfg=cfg.tea_aug,
+        cfg.dataset.dataset,
+        "mean-teacher",
+        aug_cfg=cfg.tea_aug,
     )
     has_same_trans = cfg.stu_aug == cfg.tea_aug
 
@@ -381,7 +387,7 @@ def run(cfg: DictConfig) -> None:
                     ),
                     end="\r",
                 )
-            
+
             # TODO : rem
             break
 
@@ -470,22 +476,28 @@ def run(cfg: DictConfig) -> None:
         tensorboard.add_scalar(f"{prefix}/teacher_loss", tce_avg, epoch)
         tensorboard.add_scalar(f"{prefix}/consistency_cost", ccost_avg, epoch)
 
-        tensorboard.add_scalar(
-            "hparams/learning_rate", get_lr(optimizer), epoch
-        )
+        tensorboard.add_scalar("hparams/learning_rate", get_lr(optimizer), epoch)
         tensorboard.add_scalar("hparams/lambda_cost_max", lambda_cost(), epoch)
 
         tensorboard.add_scalar(
-            f"{prefix}_max/student_acc", maximum_tracker(f"{prefix}/student_acc", acc_s), epoch
+            f"{prefix}_max/student_acc",
+            maximum_tracker(f"{prefix}/student_acc", acc_s),
+            epoch,
         )
         tensorboard.add_scalar(
-            f"{prefix}_max/teacher_acc", maximum_tracker(f"{prefix}/teacher_acc", acc_t), epoch
+            f"{prefix}_max/teacher_acc",
+            maximum_tracker(f"{prefix}/teacher_acc", acc_t),
+            epoch,
         )
         tensorboard.add_scalar(
-            f"{prefix}_max/student_f1", maximum_tracker(f"{prefix}/student_f1", fscore_s), epoch
+            f"{prefix}_max/student_f1",
+            maximum_tracker(f"{prefix}/student_f1", fscore_s),
+            epoch,
         )
         tensorboard.add_scalar(
-            f"{prefix}_max/teacher_f1", maximum_tracker(f"{prefix}/teacher_f1", fscore_t), epoch
+            f"{prefix}_max/teacher_f1",
+            maximum_tracker(f"{prefix}/teacher_f1", fscore_t),
+            epoch,
         )
 
         checkpoint.step(acc_t)
@@ -625,8 +637,12 @@ def run(cfg: DictConfig) -> None:
     final_metrics = {}
     for prefix in prefixes:
         for metric_name in metric_names:
-            final_metrics[f"{prefix}_max/{metric_name}"] = maximum_tracker.max[f"{prefix}/{metric_name}"]
-    final_metrics = {k: v.tolist() if isinstance(v, Tensor) else v for k, v in final_metrics.items()}
+            final_metrics[f"{prefix}_max/{metric_name}"] = maximum_tracker.max[
+                f"{prefix}/{metric_name}"
+            ]
+    final_metrics = {
+        k: v.tolist() if isinstance(v, Tensor) else v for k, v in final_metrics.items()
+    }
 
     print()
     print("Scores:")

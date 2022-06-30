@@ -17,7 +17,9 @@ from SSL.dataset_loader.utils import guess_folds
 from SSL.util.utils import ZipCycle, ZipDataset
 
 
-def _split_s_u(train_dataset, s_ratio: float = 1.0, nb_class: int = 10) -> Tuple[List[int], List[int]]:
+def _split_s_u(
+    train_dataset, s_ratio: float = 1.0, nb_class: int = 10
+) -> Tuple[List[int], List[int]]:
     if s_ratio == 1.0:
         return list(range(len(train_dataset))), []
 
@@ -86,7 +88,10 @@ def dct(
     train_folds, val_folds = guess_folds(train_folds, val_folds, FOLDS, verbose)
 
     # Recover extra commun arguments
-    loader_args = dict(num_workers=num_workers, pin_memory=pin_memory,)
+    loader_args = dict(
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+    )
 
     dataset_path = os.path.join(dataset_root)
 
@@ -100,7 +105,10 @@ def dct(
 
     # training subset
     train_dataset_s = dataset_class(
-        root=dataset_path, folds=train_folds, download=download, transform=train_transform_s
+        root=dataset_path,
+        folds=train_folds,
+        download=download,
+        transform=train_transform_s,
     )
     train_dataset_u = copy.deepcopy(train_dataset_s)
     train_dataset_u.transform = train_transform_u
@@ -135,9 +143,7 @@ def dct(
 # =============================================================================
 #       DEEP CO-TRAINING
 # =============================================================================
-def dct_uniloss(
-    **kwargs
-) -> Tuple[None, ZipCycle, DataLoader, None]:
+def dct_uniloss(**kwargs) -> Tuple[None, ZipCycle, DataLoader, None]:
     return dct(**kwargs)
 
 
@@ -177,7 +183,10 @@ def supervised(
 
     # Training subset
     train_dataset = ESC10_NoSR(
-        root=dataset_path, folds=train_folds, download=download, transform=train_transform
+        root=dataset_path,
+        folds=train_folds,
+        download=download,
+        transform=train_transform,
     )
 
     if supervised_ratio == 1.0:
@@ -186,7 +195,7 @@ def supervised(
         )
 
     else:
-        s_idx, u_idx = _split_s_u(
+        s_idx, _u_idx = _split_s_u(
             train_dataset, supervised_ratio, nb_class=train_dataset.nb_class
         )
 
@@ -237,7 +246,10 @@ def mean_teacher(
     )
 
     train_student_dataset = dataset_class(
-        root=dataset_root, folds=train_folds, download=download, transform=student_transform
+        root=dataset_root,
+        folds=train_folds,
+        download=download,
+        transform=student_transform,
     )
     if has_same_trans:
         # Training subset

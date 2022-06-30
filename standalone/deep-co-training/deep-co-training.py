@@ -45,7 +45,9 @@ from SSL.util.utils import (
 )
 
 
-@hydra.main(config_path=osp.join("..", "..", "config", "deep-co-training"), config_name="gsc")
+@hydra.main(
+    config_path=osp.join("..", "..", "config", "deep-co-training"), config_name="gsc"
+)
 def run(cfg: DictConfig) -> None:
     # keep the file directory as the current working directory
     os.chdir(hydra.utils.get_original_cwd())
@@ -56,8 +58,12 @@ def run(cfg: DictConfig) -> None:
     reset_seed(cfg.train_param.seed)
 
     # -------- Get the pre-processer --------
-    train_transform_s, val_transform = load_preprocesser(cfg.dataset.dataset, "dct", aug_cfg=cfg.aug_s)
-    train_transform_u, _ = load_preprocesser(cfg.dataset.dataset, "dct", aug_cfg=cfg.aug_u)
+    train_transform_s, val_transform = load_preprocesser(
+        cfg.dataset.dataset, "dct", aug_cfg=cfg.aug_s
+    )
+    train_transform_u, _ = load_preprocesser(
+        cfg.dataset.dataset, "dct", aug_cfg=cfg.aug_u
+    )
 
     # -------- Get the dataset --------
     manager, train_loader, val_loader, test_loader = load_dataset(
@@ -439,12 +445,8 @@ def run(cfg: DictConfig) -> None:
         )
 
         tensorboard.add_scalar("hparams/lambda_cot", lambda_cot(), epoch)
-        tensorboard.add_scalar(
-            "hparams/lambda_diff", lambda_diff(), epoch
-        )
-        tensorboard.add_scalar(
-            "hparams/learning_rate", get_lr(optimizer), epoch
-        )
+        tensorboard.add_scalar("hparams/lambda_diff", lambda_diff(), epoch)
+        tensorboard.add_scalar("hparams/learning_rate", get_lr(optimizer), epoch)
 
         return m1_acc, m2_acc
 
@@ -564,8 +566,12 @@ def run(cfg: DictConfig) -> None:
     final_metrics = {}
     for prefix in prefixes:
         for metric_name in metric_names:
-            final_metrics[f"{prefix}_max/{metric_name}"] = maximum_tracker.max[f"{prefix}/{metric_name}"]
-    final_metrics = {k: v.tolist() if isinstance(v, Tensor) else v for k, v in final_metrics.items()}
+            final_metrics[f"{prefix}_max/{metric_name}"] = maximum_tracker.max[
+                f"{prefix}/{metric_name}"
+            ]
+    final_metrics = {
+        k: v.tolist() if isinstance(v, Tensor) else v for k, v in final_metrics.items()
+    }
 
     print()
     print("Scores:")

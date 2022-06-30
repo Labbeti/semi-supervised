@@ -94,7 +94,8 @@ def compose_augment(
 
 
 def add_transform_to_spec_to_pool(
-    pool: List[Tuple[str, Callable]], transform_to_spec: Optional[Callable],
+    pool: List[Tuple[str, Callable]],
+    transform_to_spec: Optional[Callable],
 ) -> List[Callable]:
 
     if transform_to_spec is None:

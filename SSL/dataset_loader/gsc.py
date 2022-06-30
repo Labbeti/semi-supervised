@@ -70,7 +70,9 @@ all_classes = target_mapper
 # =============================================================================
 
 
-def _split_s_u(train_dataset: SPEECHCOMMANDS, s_ratio: float = 1.0) -> Tuple[List[int], List[int]]:
+def _split_s_u(
+    train_dataset: SPEECHCOMMANDS, s_ratio: float = 1.0
+) -> Tuple[List[int], List[int]]:
     _train_dataset = SpeechCommandsStats.from_dataset(train_dataset)
 
     nb_class = len(target_mapper)
@@ -194,9 +196,7 @@ class SpeechCommands(SPEECHCOMMANDS):
         }
 
         # mapper[self.subset] : ["backward/file.wav", ...]
-        self._walker = [
-            os.path.join(self._path, path) for path in mapper[self.subset]
-        ]
+        self._walker = [os.path.join(self._path, path) for path in mapper[self.subset]]
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(subset={self.subset})"
@@ -453,7 +453,10 @@ def dct(
 
     # Validation subset
     val_dataset = dataset_class(
-        root=dataset_root, subset="validation", transform=val_transform, download=download
+        root=dataset_root,
+        subset="validation",
+        transform=val_transform,
+        download=download,
     )
     val_loader = DataLoader(
         val_dataset, batch_size=batch_size, shuffle=False, **loader_args

@@ -67,7 +67,7 @@ class Audioset(Dataset):
         self._errors()
 
     def _errors(self):
-        """ The different condition to use this dataset are.
+        """The different condition to use this dataset are.
 
         - batch size must be a power of 2.
         - HDF chunk size must be a power of 2.
@@ -241,8 +241,7 @@ class Audioset(Dataset):
 
 class SingleAudioset(Audioset):
     def __getitem__(self, sample_idx: int) -> Tuple[Tensor, Tensor]:
-        """Recover one file from the Audioset dataset.
-        """
+        """Recover one file from the Audioset dataset."""
         # 1 - Find in which HDF file and which chunk is the sample
         hdf_file, chunk_idx, _ = self._get_location(sample_idx)
 
@@ -266,7 +265,7 @@ class SingleBalancedSampler:
         self.sorted_sample_indexes = self._sort_per_class()
 
     def _get_all_targets(self):
-        """ Pre-fetch all the labels corresponding to the dataset samples.
+        """Pre-fetch all the labels corresponding to the dataset samples.
         It will be used to balance the dataset.
         The list returned is in the same order than self.index_list
         """
@@ -277,7 +276,7 @@ class SingleBalancedSampler:
         return [self.dataset.get_target(idx) for idx in tqdm(self.index_list)]
 
     def _sort_per_class(self):
-        """ Pre-sort all the sample among the 527 different class.
+        """Pre-sort all the sample among the 527 different class.
         It will used to pick the correct file to feed the model
         """
         print("Sort the classes")
@@ -303,8 +302,7 @@ class SingleBalancedSampler:
         return len(self.index_list)
 
     def __iter__(self):
-        """ Round Robin algorithm to fetch file one by one from each class.
-        """
+        """Round Robin algorithm to fetch file one by one from each class."""
         if self.shuffle:
             self._shuffle()
 
@@ -643,8 +641,7 @@ def class_balance_split(
 
 
 class BatchSamplerFromList(Sampler):
-    """ Sample batch from a list of batches
-    """
+    """Sample batch from a list of batches"""
 
     def __init__(self, batches: List[List]):
         self.batches = batches
@@ -662,7 +659,10 @@ def get_supervised(version: str = "unbalanced", **kwargs):
     def supervised(
         dataset_root: str,
         rdcc_nbytes: int = 512 * 1024 ** 2,
-        data_shape: tuple = (64, 500,),
+        data_shape: tuple = (
+            64,
+            500,
+        ),
         data_key: str = "data",
         train_transform: Module = None,
         val_transform: Module = None,
@@ -684,14 +684,17 @@ def get_supervised(version: str = "unbalanced", **kwargs):
         )
 
         # Dataloader parameters
-        l_params = dict(num_workers=num_workers, pin_memory=pin_memory,)
+        l_params = dict(
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+        )
 
         # validation subset
         val_dataset = SingleAudioset(
             **d_params, version="eval", transform=val_transform
         )
         #         val_indexes = list(range(len(val_dataset)))
-        #         val_sampler = SingleBalancedSampler(val_dataset, val_indexes, shuffle=True)
+        #         val_sampler = SingleBalancedSampler(val_dataset, val_indexes, shuffle=False)
         val_loader = DataLoader(val_dataset, batch_size=batch_size, **l_params)
 
         # Training subset
@@ -744,7 +747,10 @@ def get_mean_teacher(version: str = "unbalanced", **kwargs):
     def mean_teacher(
         dataset_root: str,
         rdcc_nbytes: int = 512 * 1024 ** 2,
-        data_shape: tuple = (64, 500,),
+        data_shape: tuple = (
+            64,
+            500,
+        ),
         data_key: str = "data",
         train_transform: Module = None,
         val_transform: Module = None,
@@ -766,7 +772,10 @@ def get_mean_teacher(version: str = "unbalanced", **kwargs):
         )
 
         # Dataloader parameters
-        l_params = dict(num_workers=num_workers, pin_memory=pin_memory,)
+        l_params = dict(
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+        )
 
         # validation subset
         val_dataset = SingleAudioset(
@@ -815,7 +824,10 @@ def get_dct(version: str = "unbalanced", **kwargs):
     def dct(
         dataset_root: str,
         rdcc_nbytes: int = 512 * 1024 ** 2,
-        data_shape: tuple = (64, 500,),
+        data_shape: tuple = (
+            64,
+            500,
+        ),
         data_key: str = "data",
         train_transform: Module = None,
         val_transform: Module = None,
@@ -837,7 +849,10 @@ def get_dct(version: str = "unbalanced", **kwargs):
         )
 
         # Dataloader parameters
-        l_params = dict(num_workers=num_workers, pin_memory=pin_memory,)
+        l_params = dict(
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+        )
 
         # validation subset
         val_dataset = SingleAudioset(
@@ -915,7 +930,9 @@ def get_fixmatch(version: str = "unbalanced", **kwargs):
 
         # Dataloader parameters
         l_params = dict(
-            batch_size=batch_size, num_workers=num_workers, pin_memory=pin_memory,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            pin_memory=pin_memory,
         )
 
         # validation subset

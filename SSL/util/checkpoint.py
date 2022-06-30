@@ -57,7 +57,9 @@ class CheckPoint:
             print("name: ", os.path.basename(self.name))
             print("mode: ", self.mode)
 
-    def step(self, new_value: Union[None, float, Tensor] = None, iter: Optional[int] = None) -> None:
+    def step(
+        self, new_value: Union[None, float, Tensor] = None, iter: Optional[int] = None
+    ) -> None:
         # Save last epoch
         self.last_state = self._get_state(new_value, iter)
         torch.save(self.last_state, self.name + ".last")
@@ -73,7 +75,9 @@ class CheckPoint:
 
         self.epoch_counter += 1
 
-    def _get_state(self, new_value: Union[None, float, Tensor] = None, iter: Optional[int] = None) -> Dict[str, Any]:
+    def _get_state(
+        self, new_value: Union[None, float, Tensor] = None, iter: Optional[int] = None
+    ) -> Dict[str, Any]:
         state = {
             "state_dict": [m.state_dict() for m in self.model],
             "optimizer": self.optimizer.state_dict(),

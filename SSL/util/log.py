@@ -58,5 +58,10 @@ DEFAULT_LOGGING = {
             "stream": "ext://sys.stdout",  # Default is stderr
         },
     },
-    "loggers": {"": {"handlers": ["default"], "level": "DEBUG",},},
+    "loggers": {
+        "": {
+            "handlers": ["default"],
+            "level": "DEBUG",
+        },
+    },
 }

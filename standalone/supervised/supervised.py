@@ -106,7 +106,12 @@ def run(cfg: DictConfig) -> DictConfig:
     checkpoint = CheckPoint(model, optimizer, mode="max", name=checkpoint_path)
 
     # -------- Metrics and print formater --------
-    metrics = DotDict({"fscore": FScore(), "acc": CategoricalAccuracy(),})
+    metrics = DotDict(
+        {
+            "fscore": FScore(),
+            "acc": CategoricalAccuracy(),
+        }
+    )
     avg = ContinueAverage()
 
     reset_metrics = lambda: [m.reset() for m in [metrics.fscore, metrics.acc, avg]]

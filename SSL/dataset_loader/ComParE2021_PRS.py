@@ -23,7 +23,9 @@ from SSL.util.utils import (
 
 
 class ComParE2021_PRS(COMPARE2021_PRS):
-    def __init__(self, root, subset, transform: Optional[nn.Module] = None, cache: bool = False):
+    def __init__(
+        self, root, subset, transform: Optional[nn.Module] = None, cache: bool = False
+    ):
         super().__init__(root, subset)
         self.transform = transform
         self.cache = cache
@@ -122,7 +124,7 @@ class IterationBalancedSampler(Sampler):
         self.sorted_sample_indexes = self._sort_per_class()
 
     def _sort_per_class(self):
-        """ Pre-sort all the sample among the 527 different class.
+        """Pre-sort all the sample among the 527 different class.
         It will used to pick the correct file to feed the model
         """
         nb_classes = len(COMPARE2021_PRS.CLASSES)
@@ -150,8 +152,7 @@ class IterationBalancedSampler(Sampler):
         return len(self.index_list)
 
     def __iter__(self):
-        """ Round Robin algorithm to fetch file one by one from each class.
-        """
+        """Round Robin algorithm to fetch file one by one from each class."""
         if self.shuffle:
             self._shuffle()
 
@@ -199,7 +200,7 @@ def supervised(
     num_workers: int = 5,
     pin_memory: bool = False,
     seed: int = 1234,
-    **kwargs
+    **kwargs,
 ) -> Tuple[DataLoader, DataLoader]:
 
     use_cache = True
@@ -254,7 +255,7 @@ def mean_teacher(
     num_workers: int = 5,
     pin_memory: bool = False,
     seed: int = 1234,
-    **kwargs
+    **kwargs,
 ) -> Tuple[DataLoader, DataLoader]:
 
     loader_args = {

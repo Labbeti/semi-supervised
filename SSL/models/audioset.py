@@ -181,7 +181,7 @@ class cnn14(nn.Module):
 
 
 def init_layer(layer):
-    """Initialize a Linear or Convolutional layer. """
+    """Initialize a Linear or Convolutional layer."""
     nn.init.xavier_uniform_(layer.weight)
 
     if hasattr(layer, "bias"):
@@ -190,7 +190,7 @@ def init_layer(layer):
 
 
 def init_bn(bn):
-    """Initialize a Batchnorm layer. """
+    """Initialize a Batchnorm layer."""
     bn.bias.data.fill_(0.0)
     bn.weight.data.fill_(1.0)
 

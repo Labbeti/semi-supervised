@@ -19,7 +19,9 @@ class URBANSOUND8K(Dataset):
     NB_CLASS = 10
     CLASSES = []
 
-    def __init__(self, root: str, folds: Iterable[int], resample_sr: int = 22050) -> None:
+    def __init__(
+        self, root: str, folds: Iterable[int], resample_sr: int = 22050
+    ) -> None:
         self.root = root
         self.folds = list(folds)
         self.resample_sr = resample_sr

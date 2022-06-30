@@ -3,7 +3,7 @@ from ramps import sigmoid_rampup, sigmoid_rampdown
 
 
 def uniform_rule(**kwargs):
-    """ The probability to apply each augmentations is even during all the training."""
+    """The probability to apply each augmentations is even during all the training."""
     sup_steps = [0.34 for _ in range(steps)]
     cot_steps = [0.33 for _ in range(steps)]
     diff_steps = [0.33 for _ in range(steps)]
@@ -14,8 +14,8 @@ def uniform_rule(**kwargs):
 def weighted_uniform_rule(
     lambda_sup_max: int = 1, lambda_cot_max: int = 1, lambda_diff_max: int = 1, **kwargs
 ):
-    """ The constant probability are weighted using this three lambda value.
-    
+    """The constant probability are weighted using this three lambda value.
+
     :param lamdda_sup_max: Weight of the Lsup loss.
     :param lambda_cot_max: Weight of the Lcot loss.
     :param lambda_dif_max: Weight of the Ldiff loss.
@@ -37,7 +37,7 @@ def weighted_uniform_rule(
 
 
 def linear_rule(nb_epoch: int, steps: int = 10, plsup_mini: float = 0.0, **kwargs):
-    """ The probability to apply each augmentation linearly increate or decrease during the training.
+    """The probability to apply each augmentation linearly increate or decrease during the training.
 
     :param nb_epoch: The number of epoch the rule will be effective.
     :param steps: The number of time the probabilities will be updated.
@@ -73,9 +73,9 @@ def weighted_linear_rule(
     lambda_diff_max: int = 1,
     **kwargs
 ):
-    """ The probability to apply each augmentation linearly increase or decrease during the training.
+    """The probability to apply each augmentation linearly increase or decrease during the training.
     Those probabilities are weighted using three lambda value.
-    
+
     :param nb_epoch: The number of epoch the rule will be effective.
     :param steps: The number of time the probabilities will be updated.
     :param plsup_mini: The minimum probability for the supervised loss.
@@ -103,7 +103,7 @@ def weighted_linear_rule(
 
 
 def cosine_rule(nb_epoch: int, steps: int = 10, cycle: int = 1, **kwargs):
-    """ The probability to apply each augmentation follow a cosinus curve.
+    """The probability to apply each augmentation follow a cosinus curve.
 
     :param nb_epoch: The number of epoch the rule will be effective.
     :param steps: The number of time the probabilities will be updated.
@@ -126,7 +126,7 @@ def cosine_rule(nb_epoch: int, steps: int = 10, cycle: int = 1, **kwargs):
 
 
 def weighted_cosine_rule(nb_epoch: int, steps: int = 10, cycle: int = 1, **kwargs):
-    """ The probability to apply each augmentation follow a cosinus curve.
+    """The probability to apply each augmentation follow a cosinus curve.
     Those probabilities are weighted using three lambda value.
 
     :param nb_epoch: The number of epoch the rule will be effective.
@@ -161,7 +161,7 @@ def weighted_cosine_rule(nb_epoch: int, steps: int = 10, cycle: int = 1, **kwarg
 def annealing_cosine_rule(
     nb_epoch: int, steps: int = 10, cycle: int = 1, beta: float = 2, **kwargs
 ):
-    """ The probability to apply each augmentation follow a cosinus curve that decay with time.
+    """The probability to apply each augmentation follow a cosinus curve that decay with time.
 
     :param nb_epoch: The number of epoch the rule will be effective.
     :param steps: The number of time the probabilities will be updated.
@@ -194,7 +194,7 @@ def annealing_cosine_rule(
 def weighted_annealing_cosine_rule(
     nb_epoch: int, steps: int = 10, cycle: int = 1, beta: float = 2, **kwargs
 ):
-    """ The probability to apply each augmentation follow a cosinus curve that decay with time.
+    """The probability to apply each augmentation follow a cosinus curve that decay with time.
     Those probabilities are weighted using three lambda value.
 
     :param nb_epoch: The number of epoch the rule will be effective.
@@ -237,7 +237,7 @@ def weighted_annealing_cosine_rule(
 
 
 def sigmoid_rule(nb_epoch: int, steps: int = 10, **kwargs):
-    """ The probability to apply each augmentation increases or decreases following a sigmoid curve.
+    """The probability to apply each augmentation increases or decreases following a sigmoid curve.
 
     :param nb_epoch: The number of epoch the rule will be effective.
     :param steps: The number of time the probabilities will be updated.
@@ -259,7 +259,7 @@ def sigmoid_rule(nb_epoch: int, steps: int = 10, **kwargs):
 
 
 def weighted_sigmoid_rule(nb_epoch: int, steps: int = 10, **kwargs):
-    """ The probability to apply each augmentation increases or decreases following a sigmoid curve.
+    """The probability to apply each augmentation increases or decreases following a sigmoid curve.
     Those probabilities are weighted using three lambda value.
 
     :param nb_epoch: The number of epoch the rule will be effective.
@@ -289,7 +289,7 @@ def weighted_sigmoid_rule(nb_epoch: int, steps: int = 10, **kwargs):
 
 
 def rule_maker(rule_fn, nb_epoch: int, steps: int = 10, **kwargs):
-    """ Build the schedulers steps for all three loss using the array outputed by the rule functions.
+    """Build the schedulers steps for all three loss using the array outputed by the rule functions.
     Can take any argument from any rule function.
     """
     p_lsup, p_lcot, p_ldiff = rule_fn(steps, **kwargs)
@@ -304,8 +304,7 @@ def rule_maker(rule_fn, nb_epoch: int, steps: int = 10, **kwargs):
 
 
 def loss_chooser(epoch):
-    """ Simply return one loss randomly following the probabilities of the current step.
-    """
+    """Simply return one loss randomly following the probabilities of the current step."""
     for k in reversed(rules.keys()):
         if epoch >= k:
             chance = list(rules[k].values())
@@ -316,7 +315,7 @@ def loss_chooser(epoch):
 
 
 def rule_chooser(rule_str):
-    """ To manually choose which rule will be applied."""
+    """To manually choose which rule will be applied."""
     mapper = {
         "uniform": uniform_rule,
         "weighted-uniform": weighted_uniform_rule,

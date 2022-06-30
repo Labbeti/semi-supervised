@@ -65,7 +65,9 @@ class Cacher:
         return decorator
 
 
-def get_training_printers(losses: Dict[str, Any], metrics: Dict[str, Any]) -> Tuple[str, str, str, str]:
+def get_training_printers(
+    losses: Dict[str, Any], metrics: Dict[str, Any]
+) -> Tuple[str, str, str, str]:
     assert isinstance(losses, dict)
     assert isinstance(metrics, dict)
 
@@ -359,26 +361,26 @@ def reset_seed(seed: int) -> None:
 
 class ZipCycle:
     """
-        Zip through a list of iterables and sized objects of different lengths.
-        When a iterable smaller than the longest is over, this iterator is reset to the beginning.
+    Zip through a list of iterables and sized objects of different lengths.
+    When a iterable smaller than the longest is over, this iterator is reset to the beginning.
 
-        Example :
-        ```
-        r1 = range(1, 4)
-        r2 = range(1, 6)
-        iters = ZipCycle([r1, r2])
-        for v1, v2 in iters:
-            print(v1, v2)
-        ```
+    Example :
+    ```
+    r1 = range(1, 4)
+    r2 = range(1, 6)
+    iters = ZipCycle([r1, r2])
+    for v1, v2 in iters:
+        print(v1, v2)
+    ```
 
-        will print :
-        ```
-        1 1
-        2 2
-        3 3
-        1 4
-        2 5
-        ```
+    will print :
+    ```
+    1 1
+    2 2
+    3 3
+    1 4
+    2 5
+    ```
     """
 
     def __init__(self, iterables: Iterable, align: str = "max"):
@@ -417,7 +419,10 @@ class ZipCycle:
 
 
 class ZipDataset(Dataset):
-    def __init__(self, *datasets: Dataset,) -> None:
+    def __init__(
+        self,
+        *datasets: Dataset,
+    ) -> None:
         if len(datasets) > 0 and any(
             len(dset) != len(datasets[0]) for dset in datasets  # type: ignore
         ):
@@ -488,7 +493,9 @@ def save_source_as_img(sourcepath: str):
     # Convert it into a 2d matrix
     desired_dimension = 500
     missing = desired_dimension - (zip_bin_n.size % desired_dimension)
-    zip_bin_p = np.array(np.concatenate((zip_bin_n, np.array([0] * missing, dtype=np.uint8))))
+    zip_bin_p = np.array(
+        np.concatenate((zip_bin_n, np.array([0] * missing, dtype=np.uint8)))
+    )
     zip_bin_i = np.array(zip_bin_p).reshape(
         (desired_dimension, zip_bin_p.size // desired_dimension)
     )

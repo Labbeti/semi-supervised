@@ -36,7 +36,9 @@ class SupervisedTrainer(Trainer):
 
     def init_metrics(self, parameters: DotDict):
         self.metrics = DotDict(
-            fscore_fn=FScore(), acc_fn=CategoricalAccuracy(), avg_fn=ContinueAverage(),
+            fscore_fn=FScore(),
+            acc_fn=CategoricalAccuracy(),
+            avg_fn=ContinueAverage(),
         )
         self.maximum_tracker = track_maximum()
 

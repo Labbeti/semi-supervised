@@ -9,10 +9,10 @@ __author__ = "Etienne Labbe"
 
 class FixMatchLoss(Module):
     """
-		FixMatch loss module.
-		Loss formula : loss = CE(pred_s, label_s) + lambda_u * mask * CE(pred_u, label_u)
-		The mask used is 1 if the confidence prediction on weakly augmented data is above a specific threshold.
-	"""
+    FixMatch loss module.
+    Loss formula : loss = CE(pred_s, label_s) + lambda_u * mask * CE(pred_u, label_u)
+    The mask used is 1 if the confidence prediction on weakly augmented data is above a specific threshold.
+    """
 
     def __init__(
         self,
@@ -21,10 +21,10 @@ class FixMatchLoss(Module):
         reduction: str = "mean",
     ):
         """
-			:param criterion_s: The criterion used for labeled loss component.
-			:param criterion_u: The criterion used for unlabeled loss component. No reduction must be applied.
-			:param reduction: The main reduction to use. Can be 'none', 'mean' or 'sum'.
-		"""
+        :param criterion_s: The criterion used for labeled loss component.
+        :param criterion_u: The criterion used for unlabeled loss component. No reduction must be applied.
+        :param reduction: The main reduction to use. Can be 'none', 'mean' or 'sum'.
+        """
         super().__init__()
         self.criterion_s = criterion_s
         self.criterion_u = criterion_u
@@ -41,17 +41,17 @@ class FixMatchLoss(Module):
         lambda_u: float = 1.0,
     ) -> (Tensor, Tensor, Tensor):
         """
-			Compute FixMatch loss.
-			Generic :
-				loss = lambda_s * mean(criterion_s(pred_s, labels_s)) + lambda_u * mean(criterion_u(pred_u, labels_u) * mask)
-			:param pred_s_augm_weak: Output of the model for labeled batch s of shape (batch_size, nb_classes).
-			:param pred_u_augm_strong: Output of the model for unlabeled batch u of shape (batch_size, nb_classes).
-			:param mask: Binary confidence mask used to avoid using low-confidence labels as targets of shape (batch_size).
-			:param labels_s: True label of labeled batch s of shape (batch_size, nb_classes).
-			:param labels_u: Guessed label of unlabeled batch u of shape (batch_size, nb_classes).
-			:param lambda_s: Coefficient used to multiply the supervised loss component.
-			:param lambda_u: Coefficient used to multiply the unsupervised loss component.
-		"""
+        Compute FixMatch loss.
+        Generic :
+                loss = lambda_s * mean(criterion_s(pred_s, labels_s)) + lambda_u * mean(criterion_u(pred_u, labels_u) * mask)
+        :param pred_s_augm_weak: Output of the model for labeled batch s of shape (batch_size, nb_classes).
+        :param pred_u_augm_strong: Output of the model for unlabeled batch u of shape (batch_size, nb_classes).
+        :param mask: Binary confidence mask used to avoid using low-confidence labels as targets of shape (batch_size).
+        :param labels_s: True label of labeled batch s of shape (batch_size, nb_classes).
+        :param labels_u: Guessed label of unlabeled batch u of shape (batch_size, nb_classes).
+        :param lambda_s: Coefficient used to multiply the supervised loss component.
+        :param lambda_u: Coefficient used to multiply the unsupervised loss component.
+        """
         loss_s = self.criterion_s(pred_s_augm_weak, labels_s)
 
         loss_u = self.criterion_u(pred_u_augm_strong, labels_u)
@@ -67,10 +67,10 @@ class FixMatchLoss(Module):
 
 class FixMatchLossSoftReduceU(Module):
     """
-		FixMatch loss module with loss_u mean reduction using the number of pseudo labels used instead of constant bsize_u.
-		Loss formula : loss = CE(pred_s, label_s) + lambda_u * mask * CE(pred_u, label_u)
-		The mask used is 1 if the confidence prediction on weakly augmented data is above a specific threshold.
-	"""
+    FixMatch loss module with loss_u mean reduction using the number of pseudo labels used instead of constant bsize_u.
+    Loss formula : loss = CE(pred_s, label_s) + lambda_u * mask * CE(pred_u, label_u)
+    The mask used is 1 if the confidence prediction on weakly augmented data is above a specific threshold.
+    """
 
     def __init__(
         self,
@@ -79,10 +79,10 @@ class FixMatchLossSoftReduceU(Module):
         reduction: str = "mean",
     ):
         """
-			:param criterion_s: The criterion used for labeled loss component.
-			:param criterion_u: The criterion used for unlabeled loss component. No reduction must be applied.
-			:param reduction: The main reduction to use. Can be 'none', 'mean' or 'sum'.
-		"""
+        :param criterion_s: The criterion used for labeled loss component.
+        :param criterion_u: The criterion used for unlabeled loss component. No reduction must be applied.
+        :param reduction: The main reduction to use. Can be 'none', 'mean' or 'sum'.
+        """
         super().__init__()
         self.criterion_s = criterion_s
         self.criterion_u = criterion_u
@@ -99,17 +99,17 @@ class FixMatchLossSoftReduceU(Module):
         lambda_u: float = 1.0,
     ) -> (Tensor, Tensor, Tensor):
         """
-			Compute FixMatch loss.
-			Generic :
-				loss = lambda_s * mean(criterion_s(pred_s, labels_s)) + lambda_u * mean(criterion_u(pred_u, labels_u) * mask)
-			:param pred_s_augm_weak: Output of the model for labeled batch s of shape (batch_size, nb_classes).
-			:param pred_u_augm_strong: Output of the model for unlabeled batch u of shape (batch_size, nb_classes).
-			:param mask: Binary confidence mask used to avoid using low-confidence labels as targets of shape (batch_size).
-			:param labels_s: True label of labeled batch s of shape (batch_size, nb_classes).
-			:param labels_u: Guessed label of unlabeled batch u of shape (batch_size, nb_classes).
-			:param lambda_s: Coefficient used to multiply the supervised loss component.
-			:param lambda_u: Coefficient used to multiply the unsupervised loss component.
-		"""
+        Compute FixMatch loss.
+        Generic :
+                loss = lambda_s * mean(criterion_s(pred_s, labels_s)) + lambda_u * mean(criterion_u(pred_u, labels_u) * mask)
+        :param pred_s_augm_weak: Output of the model for labeled batch s of shape (batch_size, nb_classes).
+        :param pred_u_augm_strong: Output of the model for unlabeled batch u of shape (batch_size, nb_classes).
+        :param mask: Binary confidence mask used to avoid using low-confidence labels as targets of shape (batch_size).
+        :param labels_s: True label of labeled batch s of shape (batch_size, nb_classes).
+        :param labels_u: Guessed label of unlabeled batch u of shape (batch_size, nb_classes).
+        :param lambda_s: Coefficient used to multiply the supervised loss component.
+        :param lambda_u: Coefficient used to multiply the unsupervised loss component.
+        """
         loss_s = self.criterion_s(pred_s_augm_weak, labels_s)
 
         loss_u = self.criterion_u(pred_u_augm_strong, labels_u)

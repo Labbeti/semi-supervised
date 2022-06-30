@@ -52,7 +52,11 @@ class RandomChoice(nn.Module):
         else:
             n_choices = self.n_choices
 
-        transforms = random.choices(self.transforms, weights=self.weights, k=n_choices,)
+        transforms = random.choices(
+            self.transforms,
+            weights=self.weights,
+            k=n_choices,
+        )
         for transform in transforms:
             x = transform(x)
         return x
