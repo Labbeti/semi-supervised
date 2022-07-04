@@ -1,28 +1,40 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import os
 
 os.environ["MKL_NUM_THREADS"] = "2"
 os.environ["NUMEXPR_NU M_THREADS"] = "2"
 os.environ["OMP_NUM_THREADS"] = "2"
+
+import os.path as osp
 import time
+
+import hydra
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from SSL.util import load_optimizer
-from SSL.util import load_preprocesser
-from SSL.util import load_callbacks
-from SSL.util import load_dataset
-from SSL.util import load_model
-from SSL.util.checkpoint import CheckPoint, mSummaryWriter
+
+from omegaconf import DictConfig, OmegaConf
+from torch.nn.parallel import DataParallel
+from torch.utils.data.dataloader import DataLoader
+from torchsummary import summary
+
+from metric_utils.metrics import CategoricalAccuracy, FScore, ContinueAverage
+from SSL.util.loaders import (
+    load_callbacks,
+    load_dataset,
+    load_optimizer,
+    load_preprocesser
+)
+from SSL.util.model_loader import load_model
+from SSL.util.checkpoint import CheckPoint, CustomSummaryWriter
 from SSL.util.utils import reset_seed, get_datetime, track_maximum, get_lr
 from SSL.util.utils import get_training_printers, DotDict
-from metric_utils.metrics import CategoricalAccuracy, FScore, ContinueAverage
-from torchsummary import summary
-import hydra
-from omegaconf import DictConfig, OmegaConf
 
 
-@hydra.main(config_name="../../config/supervised/ubs8k.yaml")
-def run(cfg: DictConfig) -> DictConfig:
+@hydra.main(config_path=osp.join("..", "..", "config", "supervised"), config_name="ubs8k.yaml")
+def run(cfg: DictConfig) -> None:
     # keep the file directory as the current working directory
     os.chdir(hydra.utils.get_original_cwd())
 
@@ -33,11 +45,13 @@ def run(cfg: DictConfig) -> DictConfig:
 
     # -------- Get the pre-processer --------
     train_transform, val_transform = load_preprocesser(
-        cfg.dataset.dataset, "supervised", use_augmentation=cfg.train_param.augmentation
+        cfg.dataset.dataset,
+        "supervised",
+        use_augmentation=cfg.train_param.augmentation,
     )
 
     # -------- Get the dataset --------
-    _, train_loader, val_loader = load_dataset(
+    _manager, train_loader, val_loader, test_loader = load_dataset(
         cfg.dataset.dataset,
         "supervised",
         dataset_root=cfg.path.dataset_root,
@@ -52,18 +66,22 @@ def run(cfg: DictConfig) -> DictConfig:
         pin_memory=True,
         verbose=1,
     )
+    if test_loader is not None:
+        raise NotImplementedError(f"TEST IS NOT IMPLEMTENTED FOR supervised.py script.")
+
+    assert isinstance(train_loader, DataLoader)
 
     # The input shape of the data is used to generate the model
     input_shape = tuple(train_loader.dataset[0][0].shape)
 
     # -------- Prepare the model --------
-    torch.cuda.empty_cache()
-    model_func = load_model(cfg.dataset.dataset, cfg.model.model)
+    torch.cuda.empty_cache()  # type: ignore
+    model_func = load_model(cfg.dataset.dataset, cfg.model.model)  # type: ignore
     model = model_func(input_shape=input_shape, num_classes=cfg.dataset.num_classes)
     model = model.cuda()
 
     if cfg.hardware.nb_cpu > 1:
-        model = nn.DataParallel(model)
+        model = DataParallel(model)
 
     summary(model, input_shape)
 
@@ -83,7 +101,7 @@ def run(cfg: DictConfig) -> DictConfig:
     log_dir = f"{cfg.path.tensorboard_path}/{cfg.model.model}/{tensorboard_title}"
     print("Tensorboard log at: ", log_dir)
 
-    tensorboard = mSummaryWriter(log_dir=log_dir, comment=model_func.__name__)
+    tensorboard = CustomSummaryWriter(log_dir=log_dir, comment=model_func.__name__)
 
     # -------- Optimizer, callbacks, loss and checkpoint --------
     optimizer = load_optimizer(
@@ -102,23 +120,26 @@ def run(cfg: DictConfig) -> DictConfig:
 
     checkpoint_sufix = sufix_title + f"__{cfg.path.sufix}"
     checkpoint_title = f"{cfg.model.model}_{checkpoint_sufix}"
-    checkpoint_path = f"{cfg.path.checkpoint_path}/{cfg.model.model}/{checkpoint_title}"
+    # checkpoint_path = f"{cfg.path.checkpoint_path}/{cfg.model.model}/{checkpoint_title}"
+    checkpoint_path = osp.join(tensorboard.log_dir, checkpoint_title)
     checkpoint = CheckPoint(model, optimizer, mode="max", name=checkpoint_path)
 
     # -------- Metrics and print formater --------
     metrics = DotDict({"fscore": FScore(), "acc": CategoricalAccuracy(),})
     avg = ContinueAverage()
 
-    reset_metrics = lambda: [m.reset() for m in [metrics.fscore, metrics.acc, avg]]
+    def reset_metrics() -> None:
+        for metric in [metrics.fscore, metrics.acc, avg]:
+            metric.reset()
 
     maximum_tracker = track_maximum()
 
-    header, train_formater, val_formater = get_training_printers(
+    header, train_formater, val_formater, test_formater = get_training_printers(
         {"ce": loss_ce}, metrics
     )
 
     # -------- Training and Validation function --------
-    def train(epoch):
+    def train(epoch: int) -> None:
         start_time = time.time()
         nb_batch = len(train_loader)
         print("")
@@ -164,7 +185,7 @@ def run(cfg: DictConfig) -> DictConfig:
         tensorboard.add_scalar("train/f1", fscore, epoch)
         tensorboard.add_scalar("train/acc", acc, epoch)
 
-    def val(epoch):
+    def val(epoch: int) -> float:
         start_time = time.time()
         nb_batch = len(val_loader)
         print("")

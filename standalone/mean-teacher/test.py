@@ -26,7 +26,7 @@ from SSL.util.loaders import (
     load_preprocesser,
 )
 from SSL.util.model_loader import load_model
-from SSL.util.checkpoint import mSummaryWriter
+from SSL.util.checkpoint import CustomSummaryWriter
 from SSL.util.utils import (
     reset_seed,
     get_datetime,
@@ -138,7 +138,7 @@ def run(cfg: DictConfig) -> None:
     log_dir = f"{cfg.path.tensorboard_path}/{tensorboard_title}"
     print("Tensorboard log at: ", log_dir)
 
-    tensorboard = mSummaryWriter(log_dir=log_dir, comment=model_func.__name__)
+    tensorboard = CustomSummaryWriter(log_dir=log_dir, comment=model_func.__name__)
 
     # -------- Optimizer, callbacks, loss and checkpoint --------
     optimizer = load_optimizer(

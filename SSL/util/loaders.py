@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from torch import nn
 from torch.optim.optimizer import Optimizer
@@ -96,7 +96,7 @@ def load_preprocesser(
 
 def load_dataset(
     dataset: str, framework: str, **kwargs
-) -> Tuple[Any, ZipCycle, DataLoader, Optional[DataLoader]]:
+) -> Tuple[Any, Union[DataLoader, ZipCycle], DataLoader, Optional[DataLoader]]:
     import SSL.dataset_loader.esc as esc
     import SSL.dataset_loader.gsc as gsc
     import SSL.dataset_loader.ubs8k as ubs8k

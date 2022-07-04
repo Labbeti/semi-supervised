@@ -20,12 +20,13 @@ import yaml
 
 from omegaconf import DictConfig, OmegaConf
 from torch import Tensor
+from torch.nn.parallel import DataParallel
 from torchsummary import summary
 
 from metric_utils.metrics import ContinueAverage, CategoricalAccuracy, FScore, Metrics
 from SSL.loss.losses import JensenShanon
 from SSL.ramps import Warmup, sigmoid_rampup
-from SSL.util.checkpoint import CheckPoint, mSummaryWriter
+from SSL.util.checkpoint import CheckPoint, CustomSummaryWriter
 from SSL.util.loaders import (
     load_callbacks,
     load_dataset,
@@ -36,6 +37,7 @@ from SSL.util.mixup import MixUpBatchShuffle
 from SSL.util.model_loader import load_model
 from SSL.util.utils import (
     DotDict,
+    ZipCycle,
     get_datetime,
     get_lr,
     get_training_printers,
@@ -83,6 +85,7 @@ def run(cfg: DictConfig) -> None:
         verbose=1,
         download=cfg.download,
     )
+    assert isinstance(train_loader, ZipCycle)
 
     if has_same_trans:
         # The input shape of the data is used to generate the model
@@ -92,7 +95,7 @@ def run(cfg: DictConfig) -> None:
 
     # -------- Prepare the model --------
     torch.cuda.empty_cache()  # type: ignore
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # type: ignore
 
     model_func = load_model(cfg.dataset.dataset, cfg.model.model)
 
@@ -116,8 +119,8 @@ def run(cfg: DictConfig) -> None:
     teacher = teacher.to(device)
 
     if cfg.hardware.nb_gpu > 1:
-        student = nn.parallel.DataParallel(student)
-        teacher = nn.parallel.DataParallel(teacher)
+        student = DataParallel(student)
+        teacher = DataParallel(teacher)
 
     summary(student, input_shape)
 
@@ -154,7 +157,7 @@ def run(cfg: DictConfig) -> None:
     log_dir = f"{cfg.path.tensorboard_path}/{tensorboard_title}"
     print("Tensorboard log at: ", log_dir)
 
-    tensorboard = mSummaryWriter(log_dir=log_dir, comment=model_func.__name__)
+    tensorboard = CustomSummaryWriter(log_dir=log_dir, comment=model_func.__name__)
 
     # -------- Optimizer, callbacks, loss and checkpoint --------
     optimizer = load_optimizer(
@@ -186,7 +189,8 @@ def run(cfg: DictConfig) -> None:
     callbacks += [lambda_cost]
 
     checkpoint_title = f"{cfg.model.model}_{sufix_title}"
-    checkpoint_path = f"{cfg.path.checkpoint_path}/{checkpoint_title}"
+    # checkpoint_path = f"{cfg.path.checkpoint_path}/{checkpoint_title}"
+    checkpoint_path = osp.join(tensorboard.log_dir, checkpoint_title)
     checkpoint = CheckPoint(
         [student, teacher], optimizer, mode="max", name=checkpoint_path,
     )
@@ -242,7 +246,10 @@ def run(cfg: DictConfig) -> None:
 
     # update the teacher using exponentiel moving average
     def update_teacher_model(
-        student_model: nn.Module, teacher_model: nn.Module, alpha: float, epoch: int,
+        student_model: nn.Module,
+        teacher_model: nn.Module,
+        alpha: float,
+        epoch: int,
     ) -> None:
         # Use the true average until the exponential average is more correct
         alpha = min(1 - 1 / (epoch + 1), alpha)
@@ -254,7 +261,9 @@ def run(cfg: DictConfig) -> None:
 
     # For applying mixup
     mixup_fn = MixUpBatchShuffle(
-        alpha=cfg.mixup.alpha, apply_max=cfg.mixup.max, mix_labels=cfg.mixup.label,
+        alpha=cfg.mixup.alpha,
+        apply_max=cfg.mixup.max,
+        mix_labels=cfg.mixup.label,
     )
 
     def train(epoch: int) -> None:

@@ -16,7 +16,7 @@ from SSL.util.loaders import (
     load_preprocesser,
 )
 from SSL.util.model_loader import load_model
-from SSL.util.checkpoint import CheckPoint, mSummaryWriter
+from SSL.util.checkpoint import CheckPoint, CustomSummaryWriter
 from SSL.util.mixup import MixUpBatchShuffle
 from SSL.util.utils import reset_seed, get_datetime, DotDict, track_maximum, get_lr
 from SSL.util.utils import get_training_printers, DotDict
@@ -127,7 +127,7 @@ def run(cfg: DictConfig) -> None:
     log_dir = f"{cfg.path.tensorboard_path}/{cfg.model.model}/{tensorboard_title}"
     print("Tensorboard log at: ", log_dir)
 
-    tensorboard = mSummaryWriter(log_dir=log_dir, comment=model_func.__name__)
+    tensorboard = CustomSummaryWriter(log_dir=log_dir, comment=model_func.__name__)
 
     # -------- Optimizer, callbacks, loss and checkpoint --------
     optimizer = load_optimizer(

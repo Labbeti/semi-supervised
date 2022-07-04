@@ -16,29 +16,28 @@ from torch.utils.tensorboard.writer import SummaryWriter
 class CheckPoint:
     def __init__(
         self,
-        model: List[nn.Module],
+        model: Union[List[nn.Module], nn.Module],
         optimizer: Optimizer,
         mode: str = "max",
         name: str = "best",
         nb_gpu: int = 1,
         verbose: bool = True,
     ) -> None:
-        self.mode = mode
+        if isinstance(model, nn.Module):
+            model = [model]
 
+        super().__init__()
+        self.mode = mode
         self.name = name
         self.nb_gpu = nb_gpu
         self.verbose = verbose
-
         self.model = model
         self.optimizer = optimizer
+
         self.best_state: Dict[str, Any] = {}
         self.last_state: Dict[str, Any] = {}
         self.best_metric = None
         self.epoch_counter = 0
-
-        # Preparation
-        if not isinstance(self.model, list):
-            self.model = [self.model]
 
         self._create_directory()
         self._init_message()
@@ -160,7 +159,7 @@ class CheckPoint:
         return new_state_dict
 
 
-class mSummaryWriter(SummaryWriter):
+class CustomSummaryWriter(SummaryWriter):
     def __init__(
         self,
         log_dir=None,

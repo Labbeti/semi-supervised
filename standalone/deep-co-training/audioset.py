@@ -12,7 +12,7 @@ from torch.nn.parallel import DataParallel
 # from torch.utils.tensorboard import SummaryWriter
 from advertorch.attacks import GradientSignAttack
 from metric_utils.metrics import BinaryAccuracy, FScore, ContinueAverage, MAP
-from SSL.util.checkpoint import CheckPoint, mSummaryWriter
+from SSL.util.checkpoint import CheckPoint, CustomSummaryWriter
 from SSL.util.utils import (
     reset_seed,
     get_datetime,
@@ -144,7 +144,7 @@ def run(cfg: DictConfig) -> DictConfig:
     log_dir = f"{cfg.path.tensorboard_path}/{cfg.model.model}/{tensorboard_title}"
     print("Tensorboard log at: ", log_dir)
 
-    tensorboard = mSummaryWriter(log_dir=log_dir, comment=model_func.__name__)
+    tensorboard = CustomSummaryWriter(log_dir=log_dir, comment=model_func.__name__)
 
     # -------- Optimizer, callbacks, loss, adversarial generator and checkpoint --------
     optimizer = load_optimizer(

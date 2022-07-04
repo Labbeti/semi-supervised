@@ -27,7 +27,7 @@ from torchsummary import summary
 from metric_utils.metrics import ContinueAverage, CategoricalAccuracy, FScore, Ratio
 from SSL.loss import loss_cot, loss_diff, loss_sup
 from SSL.ramps import Warmup, sigmoid_rampup
-from SSL.util.checkpoint import CheckPoint, mSummaryWriter
+from SSL.util.checkpoint import CheckPoint, CustomSummaryWriter
 from SSL.util.loaders import (
     load_callbacks,
     load_dataset,
@@ -37,6 +37,7 @@ from SSL.util.loaders import (
 from SSL.util.mixup import MixUpBatchShuffle
 from SSL.util.model_loader import load_model
 from SSL.util.utils import (
+    ZipCycle,
     get_datetime,
     get_lr,
     get_train_format,
@@ -82,13 +83,14 @@ def run(cfg: DictConfig) -> None:
         verbose=1,
         download=cfg.download,
     )
+    assert isinstance(train_loader, ZipCycle)
 
     # The input shape of the data is used to generate the model
     input_shape = train_loader._iterables[0].dataset[0][0].shape
 
     # -------- Prepare the model --------
-    torch.cuda.empty_cache()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    torch.cuda.empty_cache()  # type: ignore
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # type: ignore
 
     model_func = load_model(cfg.dataset.dataset, cfg.model.model)
 
@@ -150,7 +152,7 @@ def run(cfg: DictConfig) -> None:
     log_dir = f"{cfg.path.tensorboard_path}/{tensorboard_title}"
     print("Tensorboard log at: ", log_dir)
 
-    tensorboard = mSummaryWriter(log_dir=log_dir, comment=model_func.__name__)
+    tensorboard = CustomSummaryWriter(log_dir=log_dir, comment=model_func.__name__)
 
     # -------- Optimizer, callbacks, loss, adversarial generator and checkpoint --------
     optimizer = load_optimizer(
@@ -169,7 +171,8 @@ def run(cfg: DictConfig) -> None:
 
     # Checkpoint
     checkpoint_title = f"{cfg.model.model}_{sufix_title}"
-    checkpoint_path = f"{cfg.path.checkpoint_path}/{checkpoint_title}"
+    # checkpoint_path = f"{cfg.path.checkpoint_path}/{checkpoint_title}"
+    checkpoint_path = osp.join(tensorboard.log_dir, checkpoint_title)
     checkpoint = CheckPoint([m1, m2], optimizer, mode="max", name=checkpoint_path)
 
     # define the warmups & add them to the callbacks (for update)
