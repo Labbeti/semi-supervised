@@ -48,6 +48,17 @@ class ResamplePadCrop(nn.Module):
         self.pad = Pad(target_length, align, fill_value, dim, mode="constant")
         self.crop = Crop(target_length, align, dim)
 
+    def extra_repr(self) -> str:
+        hparams = {
+            "rates": self.rates,
+            "target_length": self._target_length,
+            "align": self.align,
+            "fill_value": self.fill_value,
+            "dim": self.dim,
+            "p": self.p,
+        }
+        return ", ".join(f"{k}={v}" for k, v in hparams.items())
+
     def forward(self, x):
         if self.p >= 1.0 or random.random() <= self.p:
             return self.process(x)

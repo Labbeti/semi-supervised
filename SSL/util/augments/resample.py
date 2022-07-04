@@ -42,7 +42,13 @@ class Resample(nn.Module):
         self.p = p
 
     def extra_repr(self) -> str:
-        return f"rates={str(self.rates)}"
+        hparams = {
+            "rates": self.rates,
+            "interpolation": self.interpolation,
+            "dim": self.dim,
+            "p": self.p,
+        }
+        return ", ".join(f"{k}={v}" for k, v in hparams.items())
 
     def forward(self, x):
         if self.p >= 1.0 or random.random() <= self.p:

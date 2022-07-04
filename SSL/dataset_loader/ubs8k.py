@@ -47,7 +47,7 @@ class UrbanSound8K(URBANSOUND8K):
             return x
 
 
-def split_s_u(dataset, s_ratio: float) -> Tuple[List[int], List[int]]:
+def split_s_u(dataset: URBANSOUND8K, s_ratio: float) -> Tuple[List[int], List[int]]:
     idx_list = list(range(len(dataset.meta["filename"])))
     s_idx, u_idx = [], []
 

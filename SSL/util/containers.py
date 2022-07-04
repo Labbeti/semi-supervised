@@ -37,7 +37,21 @@ class RandomChoice(nn.Module):
         self.p = p
 
     def extra_repr(self) -> str:
-        return f"n_transforms={len(self.transforms)}, n_choices={self.n_choices}, weights={self.weights}, p={self.p}"
+        hparams = {
+            "n_choices": self.n_choices,
+            "weights": self.weights,
+            "p": self.p,
+        }
+        extra_repr = ", ".join(f"{k}={v}" for k, v in hparams.items())
+        if len(self.transforms) > 0:
+            for i, transform in enumerate(self.transforms):
+                if isinstance(transform, nn.Module):
+                    module_repr = repr(transform)
+                    module_repr = module_repr.replace("\n", "  \n")
+                    extra_repr += f"\n({i}): {module_repr}"
+                else:
+                    extra_repr += f"\n({i}): {transform.__class__.__name__}"
+        return extra_repr
 
     def forward(self, x):
         if self.p >= 1.0 or random.random() <= self.p:
@@ -60,3 +74,9 @@ class RandomChoice(nn.Module):
         for transform in transforms:
             x = transform(x)
         return x
+
+    def __len__(self) -> int:
+        return len(self.transforms)
+
+    def __getitem__(self, i: int) -> Callable:
+        return self.transforms[i]

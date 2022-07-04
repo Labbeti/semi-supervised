@@ -24,10 +24,10 @@ transform_to_spec = nn.Sequential(
 def supervised(aug_cfg: Optional[ListConfig] = None) -> Tuple[nn.Module, nn.Module]:
     if aug_cfg is not None:
         train_pool = []
-        for aug_i_cfg in aug_cfg:
+        for aug_cfg_i in aug_cfg:
             type_and_aug = {
-                "type": aug_i_cfg["type"],
-                "aug": hydra.utils.instantiate(aug_i_cfg["aug"]),
+                "type": aug_cfg_i["type"],
+                "aug": hydra.utils.instantiate(aug_cfg_i["aug"]),
             }
             train_pool.append(type_and_aug)
     else:

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+rd="${RANDOM}"
+
 # RUN MT on GSC with augments
 # common="--config-name gsc path.dataset_root=/projets/samova/leocances"
 # ./run.sh mean-teacher ${common} tag="stu_aug_ident_tea_aug_ident"
@@ -18,13 +20,13 @@ common="--config-name ${data} path.dataset_root=${dataset_root} path.checkpoint_
 method="mean-teacher"
 for stu_aug in "ident" "weak"; do
     for tea_aug in "ident" "weak"; do
-        ./run.sh ${method} ${common} aug@stu_aug=${stu_aug} aug@tea_aug=${tea_aug} tag="data_${data}__method_${method}__stu_aug_${stu_aug}__tea_aug_${tea_aug}"
+        ./run.sh ${method} ${common} aug@stu_aug=${stu_aug} aug@tea_aug=${tea_aug} tag="${rd}_data_${data}__method_${method}__stu_aug_${stu_aug}__tea_aug_${tea_aug}"
     done
 done
 
 method="deep-co-training"
 for aug_s in "ident" "weak"; do
     for aug_u in "ident" "weak"; do
-        ./run.sh ${method} ${common} aug@aug_s=${aug_s} aug@aug_u=${aug_u} tag="data_${data}__method_${method}__aug_s_${aug_s}__aug_u_${aug_u}"
+        ./run.sh ${method} ${common} aug@aug_s=${aug_s} aug@aug_u=${aug_u} tag="${rd}_data_${data}__method_${method}__aug_s_${aug_s}__aug_u_${aug_u}"
     done
 done

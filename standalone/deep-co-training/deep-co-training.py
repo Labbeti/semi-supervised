@@ -571,6 +571,7 @@ def run(cfg: DictConfig) -> None:
     }
 
     print()
+    print(f"Tensorboard logdir: {tensorboard.log_dir}.")
     print("Scores:")
     print(yaml.dump(final_metrics, sort_keys=False))
 

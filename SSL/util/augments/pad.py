@@ -43,6 +43,17 @@ class Pad(nn.Module):
         self.mode = mode
         self.p = p
 
+    def extra_repr(self) -> str:
+        hparams = {
+            "target_length": self.target_length,
+            "align": self.align,
+            "fill_value": self.fill_value,
+            "dim": self.dim,
+            "mode": self.mode,
+            "p": self.p,
+        }
+        return ", ".join(f"{k}={v}" for k, v in hparams.items())
+
     def forward(self, x):
         if self.p >= 1.0 or random.random() <= self.p:
             return self.process(x)
@@ -111,12 +122,3 @@ class Pad(nn.Module):
 
         x = pad(x, pad_seq, mode=self.mode, value=self.fill_value)
         return x
-
-    def extra_repr(self) -> str:
-        return (
-            f"target_length={self.target_length}, "
-            f"align={self.align}, "
-            f"fill_value={self.fill_value}, "
-            f"dim={self.dim}, "
-            f"mode={self.mode}"
-        )

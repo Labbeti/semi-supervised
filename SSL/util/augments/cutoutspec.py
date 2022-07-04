@@ -61,6 +61,18 @@ class CutOutSpec(nn.Module):
 
         self._check_attributes()
 
+    def extra_repr(self) -> str:
+        hparams = {
+            "freq_scales": self.freq_scales,
+            "time_scales": self.time_scales,
+            "fill_value": self.fill_value,
+            "fill_mode": self.fill_mode,
+            "freq_dim": self.freq_dim,
+            "time_dim": self.time_dim,
+            "p": self.p,
+        }
+        return ", ".join(f"{k}={v}" for k, v in hparams.items())
+
     def forward(self, x):
         if self.p >= 1.0 or random.random() <= self.p:
             return self.process(x)

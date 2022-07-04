@@ -124,11 +124,9 @@ class SpeechCommands(SPEECHCOMMANDS):
         cache: bool = False,
         **kwargs,
     ) -> None:
-        super().__init__(root, url, download)
-
-        assert subset in ["train", "validation", "testing"]
+        super().__init__(root, url, download, transform)
+        assert subset in ("train", "validation", "testing")
         self.subset = subset
-        self.transform_ = transform
         self.cache = cache
         self.root_path = self._walker[0].split("/")[:-2]
 
@@ -152,11 +150,11 @@ class SpeechCommands(SPEECHCOMMANDS):
         return waveform, target_mapper[label]
 
     def _cacheable_transform(self, x, key=None):
-        if self.transform_ is not None:
-            return self.transform_(x)
+        if self.transform is not None:
+            return self.transform(x)
         return x
 
-    def _keep_valid_files(self):
+    def _keep_valid_files(self) -> None:
         # bn = os.path.basename
         def basename(x: str) -> str:
             return "/".join(x.split("/")[-2:])
@@ -474,7 +472,7 @@ def dct(
 
     # Training subset
     train_dataset_s = dataset_class(
-        root=dataset_root, subset="train", transform=val_transform, download=download
+        root=dataset_root, subset="train", transform=train_transform_s, download=download
     )
     train_dataset_u = copy.deepcopy(train_dataset_s)
     train_dataset_u.transform = train_transform_u

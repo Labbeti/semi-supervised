@@ -73,21 +73,21 @@ def load_optimizer(dataset: str, framework: str, **kwargs) -> Optimizer:
 def load_preprocesser(
     dataset: str, framework: str, **kwargs
 ) -> Tuple[nn.Module, nn.Module]:
-    import SSL.preprocessing.esc as e
-    import SSL.preprocessing.ubs8k as u
-    import SSL.preprocessing.gsc as s
-    import SSL.preprocessing.audioset as a
-    import SSL.preprocessing.ComParE2021_PRS as c
+    import SSL.preprocessing.esc as esc
+    import SSL.preprocessing.ubs8k as ubs8k
+    import SSL.preprocessing.gsc as gsc
+    import SSL.preprocessing.audioset as audioset
+    import SSL.preprocessing.ComParE2021_PRS as prs
 
     dataset_mapper = build_mapper(
         {
-            "esc10": e,
-            "esc50": e,
-            "ubs8k": u,
-            "gsc": s,
-            "audioset-balanced": a,
-            "audioset-unbalanced": a,
-            "compare2021-prs": c,
+            "esc10": esc,
+            "esc50": esc,
+            "ubs8k": ubs8k,
+            "gsc": gsc,
+            "audioset-balanced": audioset,
+            "audioset-unbalanced": audioset,
+            "compare2021-prs": prs,
         }
     )
 
@@ -97,9 +97,9 @@ def load_preprocesser(
 def load_dataset(
     dataset: str, framework: str, **kwargs
 ) -> Tuple[Any, ZipCycle, DataLoader, Optional[DataLoader]]:
-    import SSL.dataset_loader.esc as e
-    import SSL.dataset_loader.gsc as s
-    import SSL.dataset_loader.ubs8k as u
+    import SSL.dataset_loader.esc as esc
+    import SSL.dataset_loader.gsc as gsc
+    import SSL.dataset_loader.ubs8k as ubs8k
     import SSL.dataset_loader.audioset_balanced as a_bal
     import SSL.dataset_loader.audioset_unbalanced as a_unbal
     import SSL.dataset_loader.ComParE2021_PRS as c
@@ -110,10 +110,10 @@ def load_dataset(
 
     dataset_mapper = build_mapper(
         {
-            "esc10": e,
-            "esc50": e,
-            "ubs8k": u,
-            "gsc": s,
+            "esc10": esc,
+            "esc50": esc,
+            "ubs8k": ubs8k,
+            "gsc": gsc,
             "audioset-balanced": a_bal,
             "audioset-unbalanced": a_unbal,
             "compare2021-prs": c,

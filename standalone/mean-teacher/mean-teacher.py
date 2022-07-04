@@ -281,36 +281,36 @@ def run(cfg: DictConfig) -> None:
 
         for i, (batch_s, batch_u) in enumerate(train_loader):
             if has_same_trans:
-                x_s, y_s = batch_s
-                x_u, y_u = batch_u
-                stu_x_s = x_s
-                tea_x_s = x_s
-                stu_x_u = x_u
-                tea_x_u = x_u
+                x_s, ys = batch_s
+                x_u, yu = batch_u
+                stu_xs = x_s
+                tea_xs = x_s
+                stu_xu = x_u
+                tea_xu = x_u
             else:
-                (stu_x_s, y_s), (tea_x_s, _) = batch_s
-                (stu_x_u, y_u), (tea_x_u, _) = batch_u
+                (stu_xs, ys), (tea_xs, _) = batch_s
+                (stu_xu, yu), (tea_xu, _) = batch_u
 
             # Apply mixup if needed, otherwise no mixup.
             if cfg.mixup.use:
-                tea_x_s, _ = mixup_fn(tea_x_s, y_s)
-                tea_x_u, _ = mixup_fn(tea_x_u, y_u)
+                tea_xs, _ = mixup_fn(tea_xs, ys)
+                tea_xu, _ = mixup_fn(tea_xu, yu)
 
-            stu_x_s = stu_x_s.to(device).float()
-            stu_x_u = stu_x_u.to(device).float()
-            tea_x_s = tea_x_s.to(device).float()
-            tea_x_u = tea_x_u.to(device).float()
-            y_s = y_s.to(device)
-            y_u = y_u.to(device)
+            stu_xs = stu_xs.to(device).float()
+            stu_xu = stu_xu.to(device).float()
+            tea_xs = tea_xs.to(device).float()
+            tea_xu = tea_xu.to(device).float()
+            ys = ys.to(device)
+            yu = yu.to(device)
 
             # Predictions
-            student_s_logits = student(stu_x_s)
-            student_u_logits = student(stu_x_u)
-            teacher_s_logits = teacher(tea_x_s)
-            teacher_u_logits = teacher(tea_x_u)
+            student_s_logits = student(stu_xs)
+            student_u_logits = student(stu_xu)
+            teacher_s_logits = teacher(tea_xs)
+            teacher_u_logits = teacher(tea_xu)
 
             # Calculate supervised loss (only student on S)
-            loss = loss_ce(student_s_logits, y_s)
+            loss = loss_ce(student_s_logits, ys)
 
             # Calculate consistency cost (mse(student(x), teacher(x))) x is S + U
             student_logits = torch.cat((student_s_logits, student_u_logits), dim=0)
@@ -327,7 +327,7 @@ def run(cfg: DictConfig) -> None:
 
             with torch.no_grad():
                 # Teacher prediction (for metrics purpose)
-                teacher_loss = loss_ce(teacher_s_logits, y_s)
+                teacher_loss = loss_ce(teacher_s_logits, ys)
 
                 # Update teacher
                 update_teacher_model(
@@ -335,14 +335,14 @@ def run(cfg: DictConfig) -> None:
                 )
 
                 # Compute the metrics for the student
-                y_s_onehot = F.one_hot(y_s, num_classes=cfg.dataset.num_classes)
-                y_u_onehot = F.one_hot(y_u, num_classes=cfg.dataset.num_classes)
+                y_s_onehot = F.one_hot(ys, num_classes=cfg.dataset.num_classes)
+                y_u_onehot = F.one_hot(yu, num_classes=cfg.dataset.num_classes)
 
                 acc_ss = metrics.sup.acc_s(
-                    torch.argmax(student_s_logits, dim=1), y_s
+                    torch.argmax(student_s_logits, dim=1), ys
                 ).mean(size=None)
                 acc_su = metrics.unsup.acc_s(
-                    torch.argmax(student_u_logits, dim=1), y_u
+                    torch.argmax(student_u_logits, dim=1), yu
                 ).mean(size=None)
                 fscore_ss = metrics.sup.fscore_s(
                     torch.softmax(student_s_logits, dim=1), y_s_onehot
@@ -353,10 +353,10 @@ def run(cfg: DictConfig) -> None:
 
                 # Compute the metrics for the teacher
                 acc_ts = metrics.sup.acc_t(
-                    torch.argmax(teacher_s_logits, dim=1), y_s
+                    torch.argmax(teacher_s_logits, dim=1), ys
                 ).mean(size=None)
                 acc_tu = metrics.unsup.acc_t(
-                    torch.argmax(teacher_u_logits, dim=1), y_u
+                    torch.argmax(teacher_u_logits, dim=1), yu
                 ).mean(size=None)
                 fscore_ts = metrics.sup.fscore_t(
                     torch.softmax(teacher_s_logits, dim=1), y_s_onehot
@@ -642,6 +642,7 @@ def run(cfg: DictConfig) -> None:
     }
 
     print()
+    print(f"Tensorboard logdir: {tensorboard.log_dir}.")
     print("Scores:")
     print(yaml.dump(final_metrics, sort_keys=False))
 
