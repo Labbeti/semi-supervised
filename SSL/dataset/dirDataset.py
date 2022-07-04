@@ -12,11 +12,7 @@ from torch.utils.data.dataset import Dataset
 
 
 class DirDataset(Dataset):
-    def __init__(
-        self,
-        path: str,
-        transform: Optional[nn.Module] = None,
-    ) -> None:
+    def __init__(self, path: str, transform: Optional[nn.Module] = None,) -> None:
         super().__init__()
 
         self.path = path

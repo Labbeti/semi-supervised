@@ -10,8 +10,6 @@ from SSL.dataset_loader.gsc import mean_teacher as gsc35_mean_teacher
 from SSL.util.utils import ZipCycle
 
 
-def mean_teacher(
-    **kwargs,
-) -> Tuple[None, ZipCycle, DataLoader, DataLoader]:
+def mean_teacher(**kwargs,) -> Tuple[None, ZipCycle, DataLoader, DataLoader]:
     kwargs["dataset_class"] = SpeechCommand10
     return gsc35_mean_teacher(**kwargs)

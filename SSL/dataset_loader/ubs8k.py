@@ -115,9 +115,7 @@ def supervised(
         # Train loader only use the s_idx
         sampler_s = SubsetRandomSampler(s_idx)
         train_loader = DataLoader(
-            train_dataset,
-            batch_size=batch_size,
-            sampler=sampler_s,
+            train_dataset, batch_size=batch_size, sampler=sampler_s,
         )
 
     return None, train_loader, val_loader
@@ -171,16 +169,10 @@ def mean_teacher(
     sampler_u = SubsetRandomSampler(u_idx)
 
     train_s_loader = DataLoader(
-        train_dataset,
-        batch_size=s_batch_size,
-        sampler=sampler_s,
-        **loader_args,
+        train_dataset, batch_size=s_batch_size, sampler=sampler_s, **loader_args,
     )
     train_u_loader = DataLoader(
-        train_dataset,
-        batch_size=u_batch_size,
-        sampler=sampler_u,
-        **loader_args,
+        train_dataset, batch_size=u_batch_size, sampler=sampler_u, **loader_args,
     )
 
     train_loader = ZipCycle([train_s_loader, train_u_loader], align="max")

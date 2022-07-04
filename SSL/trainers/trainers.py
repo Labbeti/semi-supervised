@@ -116,8 +116,7 @@ class Trainer:
 
         model_func = load_model(self.dataset, self.model_str)
         self.model = model_func(
-            input_shape=self.input_shape,
-            num_classes=self.num_classes,
+            input_shape=self.input_shape, num_classes=self.num_classes,
         )
         self.model = self.model.cuda()
 

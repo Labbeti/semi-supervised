@@ -57,10 +57,7 @@ class MeanTeacherTrainer(Trainer):
         empty_cache()
 
         model_func = load_model(self.dataset, self.model_str)
-        model_params = dict(
-            input_shape=self.input_shape,
-            num_classes=self.num_classes,
-        )
+        model_params = dict(input_shape=self.input_shape, num_classes=self.num_classes,)
 
         self.student = model_func(**model_params)
         self.teacher = model_func(**model_params)
@@ -226,8 +223,7 @@ class MeanTeacherTrainer(Trainer):
                 student_logits = torch.cat((ss_logits, su_logits), dim=0)
                 teacher_logits = torch.cat((ts_logits, tu_logits), dim=0)
                 ccost = self.loss_cc(
-                    self.softmax_fn(student_logits),
-                    self.softmax_fn(teacher_logits),
+                    self.softmax_fn(student_logits), self.softmax_fn(teacher_logits),
                 )
 
                 total_loss = loss + self.lambda_ccost() * ccost
@@ -246,12 +242,7 @@ class MeanTeacherTrainer(Trainer):
 
                 # Compute the metrics for the student
                 fscores, accs = self._calc_metrics(
-                    ss_logits,
-                    su_logits,
-                    ts_logits,
-                    tu_logits,
-                    y_s,
-                    y_u,
+                    ss_logits, su_logits, ts_logits, tu_logits, y_s, y_u,
                 )
 
                 # Running average of the two losses

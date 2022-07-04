@@ -58,14 +58,10 @@ def run(cfg: DictConfig) -> None:
 
     # -------- Get the pre-processer --------
     student_transform, val_transform = load_preprocesser(
-        cfg.dataset.dataset,
-        "mean-teacher",
-        aug_cfg=cfg.stu_aug,
+        cfg.dataset.dataset, "mean-teacher", aug_cfg=cfg.stu_aug,
     )
     teacher_transform, _ = load_preprocesser(
-        cfg.dataset.dataset,
-        "mean-teacher",
-        aug_cfg=cfg.tea_aug,
+        cfg.dataset.dataset, "mean-teacher", aug_cfg=cfg.tea_aug,
     )
     has_same_trans = cfg.stu_aug == cfg.tea_aug
 
@@ -192,10 +188,7 @@ def run(cfg: DictConfig) -> None:
     checkpoint_title = f"{cfg.model.model}_{sufix_title}"
     checkpoint_path = f"{cfg.path.checkpoint_path}/{checkpoint_title}"
     checkpoint = CheckPoint(
-        [student, teacher],
-        optimizer,
-        mode="max",
-        name=checkpoint_path,
+        [student, teacher], optimizer, mode="max", name=checkpoint_path,
     )
 
     # -------- Metrics and print formater --------
@@ -249,25 +242,19 @@ def run(cfg: DictConfig) -> None:
 
     # update the teacher using exponentiel moving average
     def update_teacher_model(
-        student_model: nn.Module,
-        teacher_model: nn.Module,
-        alpha: float,
-        epoch: int,
+        student_model: nn.Module, teacher_model: nn.Module, alpha: float, epoch: int,
     ) -> None:
         # Use the true average until the exponential average is more correct
         alpha = min(1 - 1 / (epoch + 1), alpha)
 
         for param, ema_param in zip(
-            student_model.parameters(),
-            teacher_model.parameters(),
+            student_model.parameters(), teacher_model.parameters(),
         ):
             ema_param.data.mul_(alpha).add_(param.data, alpha=1 - alpha)
 
     # For applying mixup
     mixup_fn = MixUpBatchShuffle(
-        alpha=cfg.mixup.alpha,
-        apply_max=cfg.mixup.max,
-        mix_labels=cfg.mixup.label,
+        alpha=cfg.mixup.alpha, apply_max=cfg.mixup.max, mix_labels=cfg.mixup.label,
     )
 
     def train(epoch: int) -> None:

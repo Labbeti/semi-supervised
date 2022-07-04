@@ -88,10 +88,7 @@ def dct(
     train_folds, val_folds = guess_folds(train_folds, val_folds, FOLDS, verbose)
 
     # Recover extra commun arguments
-    loader_args = dict(
-        num_workers=num_workers,
-        pin_memory=pin_memory,
-    )
+    loader_args = dict(num_workers=num_workers, pin_memory=pin_memory,)
 
     dataset_path = os.path.join(dataset_root)
 
@@ -239,10 +236,7 @@ def mean_teacher(
         root=dataset_root, folds=val_folds, download=download, transform=val_transform
     )
     val_loader = DataLoader(
-        val_dataset,
-        batch_size=batch_size,
-        shuffle=False,
-        **loader_args,
+        val_dataset, batch_size=batch_size, shuffle=False, **loader_args,
     )
 
     train_student_dataset = dataset_class(

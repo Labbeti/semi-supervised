@@ -419,10 +419,7 @@ class ZipCycle:
 
 
 class ZipDataset(Dataset):
-    def __init__(
-        self,
-        *datasets: Dataset,
-    ) -> None:
+    def __init__(self, *datasets: Dataset,) -> None:
         if len(datasets) > 0 and any(
             len(dset) != len(datasets[0]) for dset in datasets  # type: ignore
         ):

@@ -33,7 +33,12 @@ class Occlusion(nn.Module):
         self.p = p
 
     def extra_repr(self) -> str:
-        hparams = {"scales": self.scales, "fill_value": self.fill_value, "dim": self.dim, "p": self.p}
+        hparams = {
+            "scales": self.scales,
+            "fill_value": self.fill_value,
+            "dim": self.dim,
+            "p": self.p,
+        }
         return ", ".join(f"{k}={v}" for k, v in hparams.items())
 
     def forward(self, x):

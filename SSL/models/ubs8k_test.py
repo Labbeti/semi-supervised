@@ -146,9 +146,7 @@ class cnn03(nn.Module):
         print(linear_input, num_classes)
 
         self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Dropout(0.5),
-            nn.Linear(linear_input, num_classes),
+            nn.Flatten(), nn.Dropout(0.5), nn.Linear(linear_input, num_classes),
         )
 
     def forward(self, x):
@@ -388,9 +386,7 @@ class cnn1(nn.Module):
         )
 
         self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Dropout(0.5),
-            nn.Linear(2560, 10),
+            nn.Flatten(), nn.Dropout(0.5), nn.Linear(2560, 10),
         )
 
     def forward(self, x):
@@ -416,9 +412,7 @@ class cnn2(nn.Module):
         )
 
         self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Dropout(0.5),
-            nn.Linear(2560, 10),
+            nn.Flatten(), nn.Dropout(0.5), nn.Linear(2560, 10),
         )
 
     def forward(self, x):
@@ -444,9 +438,7 @@ class cnn3(nn.Module):
         )
 
         self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Dropout(0.5),
-            nn.Linear(800, 10),
+            nn.Flatten(), nn.Dropout(0.5), nn.Linear(800, 10),
         )
 
     def forward(self, x):
@@ -477,9 +469,7 @@ class cnn4(nn.Module):
         )
 
         self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Dropout(0.5),
-            nn.Linear(3600, 10),
+            nn.Flatten(), nn.Dropout(0.5), nn.Linear(3600, 10),
         )
 
     def forward(self, x):
@@ -509,9 +499,7 @@ class cnn5(nn.Module):
         )
 
         self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Dropout(0.5),
-            nn.Linear(1600, 10),
+            nn.Flatten(), nn.Dropout(0.5), nn.Linear(1600, 10),
         )
 
     def forward(self, x):
@@ -536,9 +524,7 @@ class cnn6(nn.Module):
         )
 
         self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Dropout(0.5),
-            nn.Linear(1600, 10),
+            nn.Flatten(), nn.Dropout(0.5), nn.Linear(1600, 10),
         )
 
     def forward(self, x):
@@ -593,9 +579,7 @@ class cnn7(nn.Module):
         )
 
         self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Dropout(0.5),
-            nn.Linear(2560, 10),
+            nn.Flatten(), nn.Dropout(0.5), nn.Linear(2560, 10),
         )
 
     def forward(self, x):

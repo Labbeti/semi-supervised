@@ -659,10 +659,7 @@ def get_supervised(version: str = "unbalanced", **kwargs):
     def supervised(
         dataset_root: str,
         rdcc_nbytes: int = 512 * 1024 ** 2,
-        data_shape: tuple = (
-            64,
-            500,
-        ),
+        data_shape: tuple = (64, 500,),
         data_key: str = "data",
         train_transform: Module = None,
         val_transform: Module = None,
@@ -684,10 +681,7 @@ def get_supervised(version: str = "unbalanced", **kwargs):
         )
 
         # Dataloader parameters
-        l_params = dict(
-            num_workers=num_workers,
-            pin_memory=pin_memory,
-        )
+        l_params = dict(num_workers=num_workers, pin_memory=pin_memory,)
 
         # validation subset
         val_dataset = SingleAudioset(
@@ -747,10 +741,7 @@ def get_mean_teacher(version: str = "unbalanced", **kwargs):
     def mean_teacher(
         dataset_root: str,
         rdcc_nbytes: int = 512 * 1024 ** 2,
-        data_shape: tuple = (
-            64,
-            500,
-        ),
+        data_shape: tuple = (64, 500,),
         data_key: str = "data",
         train_transform: Module = None,
         val_transform: Module = None,
@@ -772,10 +763,7 @@ def get_mean_teacher(version: str = "unbalanced", **kwargs):
         )
 
         # Dataloader parameters
-        l_params = dict(
-            num_workers=num_workers,
-            pin_memory=pin_memory,
-        )
+        l_params = dict(num_workers=num_workers, pin_memory=pin_memory,)
 
         # validation subset
         val_dataset = SingleAudioset(
@@ -824,10 +812,7 @@ def get_dct(version: str = "unbalanced", **kwargs):
     def dct(
         dataset_root: str,
         rdcc_nbytes: int = 512 * 1024 ** 2,
-        data_shape: tuple = (
-            64,
-            500,
-        ),
+        data_shape: tuple = (64, 500,),
         data_key: str = "data",
         train_transform: Module = None,
         val_transform: Module = None,
@@ -849,10 +834,7 @@ def get_dct(version: str = "unbalanced", **kwargs):
         )
 
         # Dataloader parameters
-        l_params = dict(
-            num_workers=num_workers,
-            pin_memory=pin_memory,
-        )
+        l_params = dict(num_workers=num_workers, pin_memory=pin_memory,)
 
         # validation subset
         val_dataset = SingleAudioset(
@@ -930,9 +912,7 @@ def get_fixmatch(version: str = "unbalanced", **kwargs):
 
         # Dataloader parameters
         l_params = dict(
-            batch_size=batch_size,
-            num_workers=num_workers,
-            pin_memory=pin_memory,
+            batch_size=batch_size, num_workers=num_workers, pin_memory=pin_memory,
         )
 
         # validation subset

@@ -444,10 +444,7 @@ def dct(
     val_folds: Any = None,
 ) -> Tuple[None, Iterable, DataLoader, DataLoader]:
 
-    loader_args = dict(
-        num_workers=num_workers,
-        pin_memory=pin_memory,
-    )
+    loader_args = dict(num_workers=num_workers, pin_memory=pin_memory,)
 
     # Validation subset
     val_dataset = dataset_class(
@@ -472,7 +469,10 @@ def dct(
 
     # Training subset
     train_dataset_s = dataset_class(
-        root=dataset_root, subset="train", transform=train_transform_s, download=download
+        root=dataset_root,
+        subset="train",
+        transform=train_transform_s,
+        download=download,
     )
     train_dataset_u = copy.deepcopy(train_dataset_s)
     train_dataset_u.transform = train_transform_u
@@ -501,9 +501,7 @@ def dct(
     return None, train_loader, val_loader, test_loader
 
 
-def dct_uniloss(
-    **kwargs,
-) -> Tuple[None, Iterable, DataLoader, DataLoader]:
+def dct_uniloss(**kwargs,) -> Tuple[None, Iterable, DataLoader, DataLoader]:
     return dct(**kwargs)
 
 
@@ -526,10 +524,7 @@ def mean_teacher(
     """
     Load the SpeechCommand for a student teacher learning
     """
-    loader_args = dict(
-        num_workers=num_workers,
-        pin_memory=pin_memory,
-    )
+    loader_args = dict(num_workers=num_workers, pin_memory=pin_memory,)
     dataset_path = os.path.join(dataset_root)
 
     # validation subset
