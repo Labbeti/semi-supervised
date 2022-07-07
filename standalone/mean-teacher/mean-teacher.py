@@ -255,9 +255,17 @@ def run(cfg: DictConfig) -> None:
         alpha = min(1 - 1 / (epoch + 1), alpha)
 
         for param, ema_param in zip(
-            student_model.parameters(), teacher_model.parameters(),
+            student_model.parameters(),
+            teacher_model.parameters(),
         ):
             ema_param.data.mul_(alpha).add_(param.data, alpha=1 - alpha)
+
+        # TODO : sync buffers ?
+        # for (_, buffer), (_, ema_buffer) in zip(
+        #     student_model.named_buffers(),
+        #     teacher_model.named_buffers(),
+        # ):
+        #     ema_buffer.data.set_(buffer.data.storage())
 
     # For applying mixup
     mixup_fn = MixUpBatchShuffle(
@@ -274,6 +282,7 @@ def run(cfg: DictConfig) -> None:
 
         reset_metrics(metrics)
         student.train()
+        teacher.train()
 
         for i, (batch_s, batch_u) in enumerate(train_loader):
             if has_same_trans:
@@ -405,6 +414,7 @@ def run(cfg: DictConfig) -> None:
         nb_batch = len(val_loader)
         reset_metrics(metrics)
         student.eval()
+        teacher.eval()
 
         with torch.no_grad():
             for i, (X, y) in enumerate(val_loader):
