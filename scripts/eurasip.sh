@@ -12,7 +12,7 @@ rd="${RANDOM}"
 # RUN MT & DCT on GSC with augments
 data="gsc"
 dataset_root="/projets/samova/leocances"
-tensorboard_root="/users/samova/elabbe/root_sslh/semi-supervised/tensorboard"
+tensorboard_root="/users/samova/elabbe/root_sslh/semi-supervised/logs"
 
 common="--config-name ${data} path.dataset_root=${dataset_root} path.tensorboard_root=${tensorboard_root}"
 
