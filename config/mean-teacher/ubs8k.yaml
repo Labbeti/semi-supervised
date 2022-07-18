@@ -1,8 +1,10 @@
 # @package _global_
 
 defaults:
-  - aug@stu_aug: ident
-  - aug@tea_aug: ident
+  - augpool@stu_aug: ident
+  - augpool@tea_aug: ident
+  - aug@pre_trans: ident
+  - hydra/job_logging: custom  # redirect log file to output_subdir
 
 hydra:
   hydra_logging:
@@ -42,7 +44,6 @@ mt:
   lambda_ccost_max: 1
   use_softmax: true
   ccost_method: mse
-  noise_db: 0.0
   use_buffer_sync: false
 
 # MixUp parameters

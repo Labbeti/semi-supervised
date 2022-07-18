@@ -63,7 +63,7 @@ def run(cfg: DictConfig) -> None:
         cfg.dataset.dataset, "mean-teacher", aug_cfg=cfg.stu_aug,
     )
     teacher_transform, _ = load_preprocesser(
-        cfg.dataset.dataset, "mean-teacher", aug_cfg=cfg.tea_aug,
+        cfg.dataset.dataset, "mean-teacher", aug_cfg=cfg.tea_aug, pre_trans_cfg=cfg.pre_trans,
     )
     has_same_trans = cfg.stu_aug == cfg.tea_aug
 
@@ -249,28 +249,25 @@ def run(cfg: DictConfig) -> None:
             student.named_buffers(),
             teacher.named_buffers(),
         ):
+            assert not ema_buffer.requires_grad and not buffer.requires_grad
             ema_buffer.set_(buffer.storage())
 
-    # update the teacher using exponentiel moving average
+    # Update the teacher using exponentiel moving average
     def update_teacher_model(
-        student_model: nn.Module, teacher_model: nn.Module, alpha: float, epoch: int,
+        student_model: nn.Module,
+        teacher_model: nn.Module,
+        alpha: float,
     ) -> None:
-        # Use the true average until the exponential average is more correct
-        alpha = min(1 - 1 / (epoch + 1), alpha)
-
-        for param, ema_param in zip(
-            student_model.parameters(), teacher_model.parameters(),
+        for stu_param, tea_param in zip(
+            student_model.parameters(),
+            teacher_model.parameters(),
         ):
-            ema_param.data.mul_(alpha).add_(param.data, alpha=1 - alpha)
+            tea_param.data.mul_(alpha).add_(stu_param.data, alpha=1 - alpha)
 
     # For applying mixup
     mixup_fn = MixUpBatchShuffle(
         alpha=cfg.mixup.alpha, apply_max=cfg.mixup.max, mix_labels=cfg.mixup.label,
     )
-
-    def noise_fn(x: Tensor) -> Tensor:
-        noise_db = cfg.mt.noise_db
-        return x + torch.rand_like(x) * noise_db + noise_db
 
     def train(epoch: int) -> None:
         start_time = time.time()
@@ -282,6 +279,8 @@ def run(cfg: DictConfig) -> None:
         student.train()
         if not cfg.mt.use_buffer_sync:
             teacher.train()
+
+        alpha = 0.0
 
         for i, (batch_s, batch_u) in enumerate(train_loader):
             if has_same_trans:
@@ -300,14 +299,10 @@ def run(cfg: DictConfig) -> None:
                 tea_xs, _ = mixup_fn(tea_xs, ys)
                 tea_xu, _ = mixup_fn(tea_xu, yu)
 
-            if cfg.mt.noise_db > 0.0:
-                tea_xs = noise_fn(tea_xs)
-                tea_xu = noise_fn(tea_xu)
-
-            stu_xs = stu_xs.to(device).float()
-            stu_xu = stu_xu.to(device).float()
-            tea_xs = tea_xs.to(device).float()
-            tea_xu = tea_xu.to(device).float()
+            stu_xs = stu_xs.to(device=device, dtype=torch.float)
+            stu_xu = stu_xu.to(device=device, dtype=torch.float)
+            tea_xs = tea_xs.to(device=device, dtype=torch.float)
+            tea_xu = tea_xu.to(device=device, dtype=torch.float)
             ys = ys.to(device)
             yu = yu.to(device)
 
@@ -337,10 +332,11 @@ def run(cfg: DictConfig) -> None:
                 # Teacher prediction (for metrics purpose)
                 teacher_loss = loss_ce(teacher_s_logits, ys)
 
+                # Use the true average until the exponential average is more correct
+                current_step = epoch * nb_batch + i
+                alpha = min(1 - 1 / (current_step + 1), cfg.mt.alpha)
                 # Update teacher
-                update_teacher_model(
-                    student, teacher, cfg.mt.alpha, epoch * nb_batch + i
-                )
+                update_teacher_model(student, teacher, alpha)
 
                 # Compute the metrics for the student
                 y_s_onehot = F.one_hot(ys, num_classes=cfg.dataset.num_classes)
@@ -409,6 +405,7 @@ def run(cfg: DictConfig) -> None:
         tensorboard.add_scalar("train/student_loss", sce_avg, epoch)
         tensorboard.add_scalar("train/teacher_loss", tce_avg, epoch)
         tensorboard.add_scalar("train/consistency_cost", ccost_avg, epoch)
+        tensorboard.add_scalar("train/ema_alpha", alpha, epoch)
 
     def val(epoch: int) -> None:
         prefix = "val"
@@ -421,7 +418,7 @@ def run(cfg: DictConfig) -> None:
 
         with torch.no_grad():
             for i, (X, y) in enumerate(val_loader):
-                X = X.to(device).float()
+                X = X.to(device=device, dtype=torch.float)
                 y = y.to(device)
 
                 # Predictions
@@ -436,26 +433,23 @@ def run(cfg: DictConfig) -> None:
                     ccost_activation(teacher_logits),
                 )
 
-                # Compute the metrics
+                # Compute metrics
                 y_onehot = F.one_hot(y, num_classes=cfg.dataset.num_classes)
 
-                acc_s = metrics.sup.acc_s(torch.argmax(student_logits, dim=1), y).mean(
-                    size=None
-                )
-                acc_t = metrics.sup.acc_t(torch.argmax(teacher_logits, dim=1), y).mean(
-                    size=None
-                )
-                fscore_s = metrics.sup.fscore_s(
-                    torch.softmax(student_logits, dim=1), y_onehot
-                ).mean(size=None)
-                fscore_t = metrics.sup.fscore_t(
-                    torch.softmax(teacher_logits, dim=1), y_onehot
-                ).mean(size=None)
+                student_preds = student_logits.argmax(dim=1)
+                teacher_preds = teacher_logits.argmax(dim=1)
+                student_probs = student_logits.softmax(dim=1)
+                teacher_probs = teacher_logits.softmax(dim=1)
+
+                metrics.sup.acc_s(student_preds, y)
+                metrics.sup.acc_t(teacher_preds, y)
+                metrics.sup.fscore_s(student_probs, y_onehot)
+                metrics.sup.fscore_t(teacher_probs, y_onehot)
 
                 # Running average of the two losses
-                sce_avg = metrics.avg.sce(loss.item()).mean(size=None)
-                tce_avg = metrics.avg.tce(teacher_loss.item()).mean(size=None)
-                ccost_avg = metrics.avg.ccost(ccost.item()).mean(size=None)
+                metrics.avg.sce(loss.item()).mean(size=None)
+                metrics.avg.tce(teacher_loss.item()).mean(size=None)
+                metrics.avg.ccost(ccost.item()).mean(size=None)
 
                 # logs
                 print(
@@ -463,51 +457,59 @@ def run(cfg: DictConfig) -> None:
                         epoch + 1,
                         i,
                         nb_batch,
-                        sce_avg,
-                        tce_avg,
-                        ccost_avg,
-                        acc_s,
-                        acc_t,
-                        fscore_s,
-                        fscore_t,
+                        metrics.avg.sce.mean(size=None),
+                        metrics.avg.tce.mean(size=None),
+                        metrics.avg.ccost.mean(size=None),
+                        metrics.sup.acc_s.mean(size=None),
+                        metrics.sup.acc_t.mean(size=None),
+                        metrics.sup.fscore_s.mean(size=None),
+                        metrics.sup.fscore_t.mean(size=None),
                         time.time() - start_time,
                     ),
                     end="\r",
                 )
 
-        tensorboard.add_scalar(f"{prefix}/student_acc", acc_s, epoch)
-        tensorboard.add_scalar(f"{prefix}/student_f1", fscore_s, epoch)
-        tensorboard.add_scalar(f"{prefix}/teacher_acc", acc_t, epoch)
-        tensorboard.add_scalar(f"{prefix}/teacher_f1", fscore_t, epoch)
-        tensorboard.add_scalar(f"{prefix}/student_loss", sce_avg, epoch)
-        tensorboard.add_scalar(f"{prefix}/teacher_loss", tce_avg, epoch)
-        tensorboard.add_scalar(f"{prefix}/consistency_cost", ccost_avg, epoch)
+        student_acc = metrics.sup.acc_s.mean(size=None)
+        student_fscore = metrics.sup.fscore_s.mean(size=None)
+        teacher_acc = metrics.sup.acc_t.mean(size=None)
+        teacher_fscore = metrics.sup.acc_t.mean(size=None)
+
+        # Log epoch values
+        tensorboard.add_scalar(f"{prefix}/student_acc", student_acc, epoch)
+        tensorboard.add_scalar(f"{prefix}/student_f1", student_fscore, epoch)
+        tensorboard.add_scalar(f"{prefix}/teacher_acc", teacher_acc, epoch)
+        tensorboard.add_scalar(f"{prefix}/teacher_f1", teacher_fscore, epoch)
+
+        tensorboard.add_scalar(f"{prefix}/student_loss", metrics.avg.sce.mean(size=None), epoch)
+        tensorboard.add_scalar(f"{prefix}/teacher_loss", metrics.avg.tce.mean(size=None), epoch)
+        tensorboard.add_scalar(f"{prefix}/consistency_cost", metrics.avg.ccost.mean(size=None), epoch)
 
         tensorboard.add_scalar("hparams/learning_rate", get_lr(optimizer), epoch)
         tensorboard.add_scalar("hparams/lambda_cost_max", lambda_cost(), epoch)
 
+        # Update & log max values
         tensorboard.add_scalar(
             f"{prefix}_max/student_acc",
-            maximum_tracker(f"{prefix}/student_acc", acc_s),
-            epoch,
-        )
-        tensorboard.add_scalar(
-            f"{prefix}_max/teacher_acc",
-            maximum_tracker(f"{prefix}/teacher_acc", acc_t),
+            maximum_tracker(f"{prefix}/student_acc", student_acc),
             epoch,
         )
         tensorboard.add_scalar(
             f"{prefix}_max/student_f1",
-            maximum_tracker(f"{prefix}/student_f1", fscore_s),
+            maximum_tracker(f"{prefix}/student_f1", student_fscore),
+            epoch,
+        )
+        tensorboard.add_scalar(
+            f"{prefix}_max/teacher_acc",
+            maximum_tracker(f"{prefix}/teacher_acc", teacher_acc),
             epoch,
         )
         tensorboard.add_scalar(
             f"{prefix}_max/teacher_f1",
-            maximum_tracker(f"{prefix}/teacher_f1", fscore_t),
+            maximum_tracker(f"{prefix}/teacher_f1", teacher_fscore),
             epoch,
         )
 
-        checkpoint.step(acc_t)
+        checkpoint.step(teacher_acc)
         for c in callbacks:
             c.step()
 
@@ -606,10 +608,11 @@ def run(cfg: DictConfig) -> None:
         tensorboard.flush()
     print()
 
+    best_epoch = checkpoint.best_state["epoch"]
+    if best_epoch is None:
+        best_epoch = -1
+
     if test_loader is not None:
-        best_epoch = checkpoint.best_state["epoch"]
-        if best_epoch is None:
-            best_epoch = -1
         print(f"Loading best model for testing... ({best_epoch=})\n")
         checkpoint.load_best()
         test(best_epoch)
@@ -638,12 +641,15 @@ def run(cfg: DictConfig) -> None:
     # convert all value to str
     hparams = dict(zip(hparams.keys(), map(str, hparams.values())))
 
-    prefixes = ["val"]
+    prefixes = []
+    if cfg.train_param.epochs > 0:
+        prefixes.append("val")
     if test_loader is not None:
         prefixes.append("test")
+
     metric_names = ("student_acc", "teacher_acc", "student_f1", "teacher_f1")
 
-    final_metrics = {}
+    final_metrics = {"best_epoch": best_epoch}
     for prefix in prefixes:
         for metric_name in metric_names:
             final_metrics[f"{prefix}_max/{metric_name}"] = maximum_tracker.max[
@@ -656,7 +662,7 @@ def run(cfg: DictConfig) -> None:
     print()
     print(f"Tensorboard logdir: {tensorboard.log_dir}.")
     print("Scores:")
-    print(yaml.dump(final_metrics, sort_keys=False))
+    print(yaml.dump(final_metrics))
 
     metrics_fpath = osp.join(tensorboard.log_dir, "metrics.yaml")
     with open(metrics_fpath, "w") as file:

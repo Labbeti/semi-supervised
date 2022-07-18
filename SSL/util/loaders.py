@@ -17,7 +17,6 @@ def build_mapper(modules: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
         dataset_mapper[dataset_name] = {
             "supervised": dataset_module.supervised,
             "dct": dataset_module.dct,
-            #             "dct_uniloss": dataset_module.dct_uniloss,
             "mean-teacher": dataset_module.mean_teacher,
             "fixmatch": dataset_module.fixmatch,
         }
@@ -124,20 +123,20 @@ def load_dataset(
 
 
 def load_helper(dataset: str, framework: str, mapper: dict, **kwargs):
-    _dataset = dataset.lower()
-    _framework = framework.lower()
+    dataset = dataset.lower()
+    framework = framework.lower()
 
-    if _dataset not in mapper.keys():
+    if dataset not in mapper.keys():
         available_dataset = "{" + " | ".join(list(mapper.keys())) + "}"
         raise ValueError(
-            f"dataset {_dataset} is not available. Available dataset are: {available_dataset}"
+            f"dataset {dataset} is not available. Available dataset are: {available_dataset}"
         )
 
-    if _framework not in mapper[_dataset].keys():
-        available_framework = "{" + " | ".join(list(mapper[_dataset].keys()))
+    if framework not in mapper[dataset].keys():
+        available_framework = "{" + " | ".join(list(mapper[dataset].keys()))
         raise ValueError(
-            f"framework {_framework} is not available. Available framework are: {available_framework}"
+            f"framework {framework} is not available. Available framework are: {available_framework}"
         )
 
-    print(f"loading dataset: {_framework} | {_dataset}")
-    return mapper[_dataset][_framework](**kwargs)
+    print(f"loading dataset: {framework} | {dataset}")
+    return mapper[dataset][framework](**kwargs)

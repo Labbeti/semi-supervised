@@ -1,8 +1,9 @@
 # @package _global_
 
 defaults:
-  - aug@aug_s: ident
-  - aug@aug_u: ident
+  - augpool@aug_s: ident
+  - augpool@aug_u: ident
+  - hydra/job_logging: custom  # redirect log file to output_subdir
 
 hydra:
   hydra_logging:
@@ -34,12 +35,13 @@ train_param:
   train_folds: null
   val_folds: null
 
-# Mean teacher parameters
+# DCT parameters
 dct:
   epsilon: 0.02
   warmup_length: 160
   lambda_cot_max: 1
   lambda_diff_max: 0.5
+  enable_autocast: true
 
 # MixUp parameters
 mixup:

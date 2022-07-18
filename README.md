@@ -7,7 +7,7 @@ Application of Deep Co-Training for audio tagging on multiple audio dataset.
 git clone https://github.com/leocances/semi-supervised.git
 
 cd semi-supervised
-conda env create -f environement.ym
+conda env create -f environment.yaml
 conda activate ssl
 
 pip install -e .
@@ -56,7 +56,7 @@ python standalone/full_supervised/full_supervised.py --from-config DCT/util/conf
 ```
 
 # Train the systems
-The directory `standalone/` contains the scrpits to execute the different semi-supervised methods and the usual supervised approach. Each approach has it own working directory which contain the python scripts.
+The directory `standalone/` contains the scripts to execute the different semi-supervised methods and the usual supervised approach. Each approach has it own working directory which contains the python scripts.
 
 The handling of running arguments is done using [hydra](hydra.cc) and the configuration files can be found in the directory `config/`. There is one configuration file for each dataset and methods.
 

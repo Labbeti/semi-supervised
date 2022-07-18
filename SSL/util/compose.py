@@ -3,7 +3,7 @@
 
 import inspect
 
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 from torch import nn
 
@@ -28,7 +28,7 @@ class Lambda(nn.Module):
 
 
 def compose_augment(
-    pool: List[Dict[str, Any]],
+    pool: List[Tuple[str, Callable]],
     transform_to_spec: Optional[Callable],
     pre_transform: Optional[Callable],
     post_transform: Optional[Callable],
@@ -86,11 +86,10 @@ def compose_augment(
     :param post_transform: The post-transform to apply after augment & spectrogram.
     :return: The augment pool composed as a Callable object.
     """
-    pool_list_tuple = [(aug_info["type"], aug_info["aug"]) for aug_info in pool]
-    pool_with_spec = add_transform_to_spec_to_pool(pool_list_tuple, transform_to_spec)
-    augment = random_choice_pool(pool_with_spec)
-    augment = add_pre_post_transforms(pre_transform, augment, post_transform)
-    return augment
+    pool_with_spec = add_transform_to_spec_to_pool(pool, transform_to_spec)
+    aug_pool = random_choice_pool(pool_with_spec)
+    aug_pool = add_pre_post_transforms(pre_transform, aug_pool, post_transform)
+    return aug_pool
 
 
 def add_transform_to_spec_to_pool(

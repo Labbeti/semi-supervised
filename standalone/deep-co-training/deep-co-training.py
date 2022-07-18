@@ -123,32 +123,32 @@ def run(cfg: DictConfig) -> None:
 
     # -------- Tensorboard and checkpoint --------
     # -- Prepare suffix
-    sufix_title = ""
-    sufix_title += f"_{cfg.train_param.learning_rate}-lr"
-    sufix_title += f"_{cfg.train_param.supervised_ratio}-sr"
-    sufix_title += f"_{cfg.train_param.epochs}-e"
-    sufix_title += f"_{cfg.train_param.batch_size}-bs"
-    sufix_title += f"_{cfg.train_param.seed}-seed"
+    suffix_title = ""
+    suffix_title += f"_{cfg.train_param.learning_rate}-lr"
+    suffix_title += f"_{cfg.train_param.supervised_ratio}-sr"
+    suffix_title += f"_{cfg.train_param.epochs}-e"
+    suffix_title += f"_{cfg.train_param.batch_size}-bs"
+    suffix_title += f"_{cfg.train_param.seed}-seed"
 
     # deep co training parameters
-    sufix_title += f"_{cfg.dct.epsilon}eps"
-    sufix_title += f"-{cfg.dct.warmup_length}wl"
-    sufix_title += f"-{cfg.dct.lambda_cot_max}lcm"
-    sufix_title += f"-{cfg.dct.lambda_diff_max}ldm"
+    suffix_title += f"_{cfg.dct.epsilon}eps"
+    suffix_title += f"-{cfg.dct.warmup_length}wl"
+    suffix_title += f"-{cfg.dct.lambda_cot_max}lcm"
+    suffix_title += f"-{cfg.dct.lambda_diff_max}ldm"
 
     # mixup parameters
     if cfg.mixup.use:
-        sufix_title += "_mixup"
+        suffix_title += "_mixup"
         if cfg.mixup.max:
-            sufix_title += "-max"
+            suffix_title += "-max"
         if cfg.mixup.label:
-            sufix_title += "-label"
-        sufix_title += f"-{cfg.mixup.alpha}-a"
+            suffix_title += "-label"
+        suffix_title += f"-{cfg.mixup.alpha}-a"
 
-    sufix_title += f"_{cfg.tag}"
+    suffix_title += f"_{cfg.tag}"
 
     # -------- Tensorboard logging --------
-    tensorboard_title = f"{get_datetime()}_{cfg.model.model}_{sufix_title}"
+    tensorboard_title = f"{get_datetime()}_{cfg.model.model}_{suffix_title}"
     log_dir = f"{cfg.path.tensorboard_path}/{tensorboard_title}"
     print("Tensorboard log at: ", log_dir)
 
@@ -170,7 +170,7 @@ def run(cfg: DictConfig) -> None:
     )
 
     # Checkpoint
-    checkpoint_title = f"{cfg.model.model}_{sufix_title}"
+    checkpoint_title = f"{cfg.model.model}_{suffix_title}"
     # checkpoint_path = f"{cfg.path.checkpoint_path}/{checkpoint_title}"
     checkpoint_path = osp.join(tensorboard.log_dir, checkpoint_title)
     checkpoint = CheckPoint([m1, m2], optimizer, mode="max", name=checkpoint_path)
@@ -233,7 +233,7 @@ def run(cfg: DictConfig) -> None:
     def train(epoch: int) -> float:
         prefix = "train"
         start_time = time.time()
-        print("")
+        print()
 
         reset_metrics()
         m1.train()
@@ -253,7 +253,7 @@ def run(cfg: DictConfig) -> None:
             x_s1, x_s2, x_u = x_s1.to(device), x_s2.to(device), x_u.to(device)
             y_s1, y_s2, y_u = y_s1.to(device), y_s2.to(device), y_u.to(device)
 
-            with autocast():
+            with autocast(cfg.dct.enable_autocast):
                 logits_s1 = m1(x_s1)
                 logits_s2 = m2(x_s2)
                 logits_u1 = m1(x_u)
@@ -529,10 +529,11 @@ def run(cfg: DictConfig) -> None:
         tensorboard.flush()
     print()
 
+    best_epoch = checkpoint.best_state["epoch"]
+    if best_epoch is None:
+        best_epoch = -1
+
     if test_loader is not None:
-        best_epoch = checkpoint.best_state["epoch"]
-        if best_epoch is None:
-            best_epoch = -1
         print(f"Loading best model for testing... ({best_epoch=})\n")
         checkpoint.load_best()
         test(best_epoch)
@@ -568,7 +569,7 @@ def run(cfg: DictConfig) -> None:
 
     metric_names = ("m1_acc", "m2_acc")
 
-    final_metrics = {}
+    final_metrics = {"best_epoch": best_epoch}
     for prefix in prefixes:
         for metric_name in metric_names:
             final_metrics[f"{prefix}_max/{metric_name}"] = maximum_tracker.max[
@@ -582,7 +583,7 @@ def run(cfg: DictConfig) -> None:
     print()
     print(f"Tensorboard logdir: {tensorboard.log_dir}.")
     print("Scores:")
-    print(yaml.dump(final_metrics, sort_keys=False))
+    print(yaml.dump(final_metrics))
 
     metrics_fpath = osp.join(tensorboard.log_dir, "metrics.yaml")
     with open(metrics_fpath, "w") as file:
