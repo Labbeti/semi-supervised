@@ -120,7 +120,7 @@
     "group_t.add_argument(\"-m\", \"--model\", default=\"wideresnet28_2\", type=str)\n",
     "group_t.add_argument(\"--supervised_ratio\", default=0.1, type=float)\n",
     "group_t.add_argument(\"--batch_size\", default=64, type=int)\n",
-    "group_t.add_argument(\"--nb_epoch\", default=200, type=int)\n",
+    "group_t.add_argument(\"--epochs\", default=200, type=int)\n",
     "group_t.add_argument(\"--learning_rate\", default=0.003, type=float)\n",
     "group_t.add_argument(\"--resume\", action=\"store_true\", default=False)\n",
     "group_t.add_argument(\"--seed\", default=1234, type=int)\n",
@@ -382,7 +382,7 @@
    "outputs": [],
    "source": [
     "optimizer = load_optimizer(args.dataset, \"mean-teacher\", student=student, learning_rate=args.learning_rate)\n",
-    "callbacks = load_callbacks(args.dataset, \"mean-teacher\", optimizer=optimizer, nb_epoch=args.nb_epoch)"
+    "callbacks = load_callbacks(args.dataset, \"mean-teacher\", optimizer=optimizer, epochs=args.epochs)"
    ]
   },
   {
@@ -784,9 +784,9 @@
     "print(header)\n",
     "\n",
     "start_epoch = checkpoint.epoch_counter\n",
-    "end_epoch = args.nb_epoch\n",
+    "end_epoch = args.epochs\n",
     "\n",
-    "for e in range(start_epoch, args.nb_epoch):\n",
+    "for e in range(start_epoch, args.epochs):\n",
     "    train(e)\n",
     "    val(e)\n",
     "    \n",

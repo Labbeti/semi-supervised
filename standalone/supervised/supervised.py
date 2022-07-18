@@ -25,7 +25,7 @@ from SSL.util.loaders import (
     load_callbacks,
     load_dataset,
     load_optimizer,
-    load_preprocesser
+    load_preprocesser,
 )
 from SSL.util.model_loader import load_model
 from SSL.util.checkpoint import CheckPoint, CustomSummaryWriter
@@ -33,7 +33,9 @@ from SSL.util.utils import reset_seed, get_datetime, track_maximum, get_lr
 from SSL.util.utils import get_training_printers, DotDict
 
 
-@hydra.main(config_path=osp.join("..", "..", "config", "supervised"), config_name="ubs8k.yaml")
+@hydra.main(
+    config_path=osp.join("..", "..", "config", "supervised"), config_name="ubs8k.yaml"
+)
 def run(cfg: DictConfig) -> None:
     # keep the file directory as the current working directory
     os.chdir(hydra.utils.get_original_cwd())
@@ -95,7 +97,7 @@ def run(cfg: DictConfig) -> None:
     sufix_title += f"_{cfg.train_param.augmentation}-aug"
 
     # -------- Tensorboard logging --------
-    tensorboard_sufix = sufix_title + f"_{cfg.train_param.nb_epoch}-e"
+    tensorboard_sufix = sufix_title + f"_{cfg.train_param.epochs}-e"
     tensorboard_sufix += f"__{cfg.path.sufix}"
     tensorboard_title = f"{get_datetime()}_{cfg.model.model}_{tensorboard_sufix}"
     log_dir = f"{cfg.path.tensorboard_path}/{cfg.model.model}/{tensorboard_title}"
@@ -114,7 +116,7 @@ def run(cfg: DictConfig) -> None:
         cfg.dataset.dataset,
         "supervised",
         optimizer=optimizer,
-        nb_epoch=cfg.train_param.nb_epoch,
+        epochs=cfg.train_param.epochs,
     )
     loss_ce = nn.CrossEntropyLoss(reduction="mean")
 
@@ -244,7 +246,7 @@ def run(cfg: DictConfig) -> None:
         checkpoint.load_last()
 
     start_epoch = checkpoint.epoch_counter
-    end_epoch = cfg.train_param.nb_epoch
+    end_epoch = cfg.train_param.epochs
 
     for e in range(start_epoch, end_epoch):
         train(e)
@@ -264,7 +266,7 @@ def run(cfg: DictConfig) -> None:
         model=cfg.model.model,
         supervised_ratio=cfg.train_param.supervised_ratio,
         batch_size=cfg.train_param.batch_size,
-        nb_epoch=cfg.train_param.nb_epoch,
+        epochs=cfg.train_param.epochs,
         learning_rate=cfg.train_param.learning_rate,
         seed=cfg.train_param.seed,
         train_folds=cfg.train_param.train_folds,

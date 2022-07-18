@@ -24,7 +24,7 @@ function show_help {
     echo ""
     echo "Training parameters"
     echo "    --supervised_ratio           SUPERVISED RATIO (default 1.0)"
-    echo "    --nb_epoch           NB_EPOCH (default 200)"
+    echo "    --epochs           epochs (default 200)"
     echo "    --learning_rate      LR (default 0.001)"
     echo "    --batch_size         BATCH_SIZE (default 64)"
     echo "    --seed               SEED (default 1234)"
@@ -56,7 +56,7 @@ PARTITION="GPUNodes"
 MODEL=MobileNetV2
 DATASET="audioset-unbalanced"
 RATIO=1.0
-NB_EPOCH=125000
+epochs=125000
 BATCH_SIZE=256
 LR=0.003
 SEED=1234
@@ -93,7 +93,7 @@ while :; do
         --dataset)          DATASET=$(parse_long $2); shift; shift;;
         --model)            MODEL=$(parse_long $2); shift; shift;;
         --supervised_ratio) RATIO=$(parse_long $2); shift; shift;;
-        --nb_epoch)         NB_EPOCH=$(parse_long $2); shift; shift;;
+        --epochs)         epochs=$(parse_long $2); shift; shift;;
         --learning_rate)    LR=$(parse_long $2); shift; shift;;
         --batch_size)       BATCH_SIZE=$(parse_long $2); shift; shift;;
         --seed)             SEED=$(parse_long $2); shift; shift;;
@@ -162,7 +162,7 @@ common_args=\$(append "\$common_args" $MODEL '--model')
 
 # -------- training common_args --------
 common_args=\$(append "\$common_args" $RATIO '--supervised_ratio')
-common_args=\$(append "\$common_args" $NB_EPOCH '--nb_epoch')
+common_args=\$(append "\$common_args" $epochs '--epochs')
 common_args=\$(append "\$common_args" $LR '--learning_rate')
 common_args=\$(append "\$common_args" $BATCH_SIZE '--batch_size')
 common_args=\$(append "\$common_args" $SEED '--seed')

@@ -1,4 +1,4 @@
-t_args="--learning_rate 0.001 --batch_size 64 --nb_epoch 200 --supervised_ratio 0.1"
+t_args="--learning_rate 0.001 --batch_size 64 --epochs 200 --supervised_ratio 0.1"
 mt_args="--ema_alpha 0.999 --warmup_length 50 --lambda_cost_max 1 --ccost_method js --ccost_softmax"
 m_args="--mixup --mixup_alpha 0.4"
 

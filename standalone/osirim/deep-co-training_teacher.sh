@@ -18,7 +18,7 @@ function show_help {
     echo ""
     echo "Training parameters"
     echo "    --supervised_ratio SUPERVISED RATIO (default 1.0)"
-    echo "    --nb_epoch         EPOCH (default 200)"
+    echo "    --epochs         EPOCH (default 200)"
     echo "    --learning_rate    LR (default 0.001)"
     echo "    --batch_size       BATCH_SIZE (default 64)"
     echo "    --seed             SEED (default 1234)"
@@ -85,7 +85,7 @@ while :; do
         --ccost_softmax)    SOFTMAX=0; shift;;
 
         --supervised_ratio) RATIO=$(parse_long $2);      shift; shift;;
-        --nb_epoch)         EPOCH=$(parse_long $2);      shift; shift;;
+        --epochs)         EPOCH=$(parse_long $2);      shift; shift;;
         --learning_rate)    LR=$(parse_long $2);         shift; shift;;
         --batch_size)       BATCH_SIZE=$(parse_long $2); shift; shift;;
         --num_classes)      NB_CLS=$(parse_long $2);     shift; shift;;
@@ -152,7 +152,7 @@ common_args="\${common_args} --model ${MODEL}"
 
 # -------- training common_args --------
 common_args="\${common_args} --supervised_ratio ${RATIO}"
-common_args="\${common_args} --nb_epoch ${EPOCH}"
+common_args="\${common_args} --epochs ${EPOCH}"
 common_args="\${common_args} --learning_rate ${LR}"
 common_args="\${common_args} --batch_size ${BATCH_SIZE}"
 common_args="\${common_args} --seed ${SEED}"

@@ -166,7 +166,7 @@ common_args="\${common_args} --model ${MODEL}"
 
 # -------- training common_args --------
 common_args="\${common_args} --supervised_ratio ${RATIO}"
-common_args="\${common_args} --nb_epoch ${EPOCH}"
+common_args="\${common_args} --epochs ${EPOCH}"
 common_args="\${common_args} --learning_rate ${LR}"
 common_args="\${common_args} --batch_size ${BATCH_SIZE}"
 common_args="\${common_args} --seed ${SEED}"

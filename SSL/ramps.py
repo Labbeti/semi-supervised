@@ -51,21 +51,21 @@ def sigmoid_rampdown(current_epoch, ramp_length):
 
 
 class Warmup:
-    def __init__(self, max, nb_epoch, method):
+    def __init__(self, max, epochs, method):
         self.max = max
-        self.nb_epoch = nb_epoch
+        self.epochs = epochs
         self.method = method
         self.current_epoch = 0
-        self.value = method(0, nb_epoch)
+        self.value = method(0, epochs)
 
     def reset(self):
         self.current_epoch = 0
-        self.value = method(0, nb_epoch)
+        self.value = method(0, epochs)
 
     def step(self):
-        if self.current_epoch < self.nb_epoch:
+        if self.current_epoch < self.epochs:
             self.current_epoch += 1
-            ramp = self.method(self.current_epoch, self.nb_epoch)
+            ramp = self.method(self.current_epoch, self.epochs)
             self.value = self.max * ramp
 
         return self.value

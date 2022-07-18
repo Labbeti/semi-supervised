@@ -28,7 +28,7 @@ function show_help {
     echo ""
     echo "Training parameters"
     echo "    --batch_size BATCH_SIZE       The batch size"
-    echo "    --nb_epoch NB_EPOCH           The total number of epoch"
+    echo "    --epochs epochs           The total number of epoch"
     echo "    --learning_rate LR            The initial learning rate"
     echo "    --seed SEED                   The random generation seed"
     echo "    - r | --ratoi SR              The ratio of supervised file"
@@ -50,7 +50,7 @@ PARTITION="GPUNodes"
 
 BATCH_SIZE=100
 LR=0.003
-NB_EPOCH=300
+epochs=300
 SR=0.1
 LCM=10
 LDM=0.5
@@ -78,7 +78,7 @@ while :; do
         
         --batch_size) BATCH_SIZE=$(parse_long $2); shift: shift;; #
         --learning_rate) LR=$(parse_long $2); shift; shift;; #
-        --nb_epoch) NB_EPOCH=$(parse_long $2); shift; shift;; #
+        --epochs) epochs=$(parse_long $2); shift; shift;; #
         --supervised_ratio) SR=$(parse_long $2); shift; shift;; #
         --lambda_cot_max) LCM=$(parse_long $2); shift; shift;; #
         --lambda_diff_max) LDM=$(parse_long $2); shift; shift;; #
@@ -123,7 +123,7 @@ commun_args=""
 commun_args="\${commun_args} --seed ${SEED}"
 commun_args="\${commun_args} --model ${MODEL}"
 commun_args="\${commun_args} --supervised_ratio ${SR} --learning_rate ${LR}"
-commun_args="\${commun_args} --batch_size ${BATCH_SIZE} --nb_epoch ${NB_EPOCH}"
+commun_args="\${commun_args} --batch_size ${BATCH_SIZE} --epochs ${epochs}"
 commun_args="\${commun_args} --lambda_cot_max ${LCM} --lambda_diff_max ${LDM} --warmup_length ${WL}"
 commun_args="\${commun_args} --tensorboard_path deep-co-training_grid-search"
 commun_args="\${commun_args} --tensorboard_sufix ${SUFIX}"

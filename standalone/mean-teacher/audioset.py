@@ -140,7 +140,7 @@ def run(cfg: DictConfig) -> None:
         cfg.dataset.dataset,
         "mean-teacher",
         optimizer=optimizer,
-        nb_epoch=cfg.train_param.nb_iteration,
+        epochs=cfg.train_param.nb_iteration,
     )
     loss_ce = nn.BCEWithLogitsLoss(reduction="mean")
 

@@ -110,7 +110,7 @@ def run(cfg: DictConfig) -> None:
     sufix_title = ""
     sufix_title += f"_{cfg.train_param.learning_rate}-lr"
     sufix_title += f"_{cfg.train_param.supervised_ratio}-sr"
-    sufix_title += f"_{cfg.train_param.nb_epoch}-e"
+    sufix_title += f"_{cfg.train_param.epochs}-e"
     sufix_title += f"_{cfg.train_param.batch_size}-bs"
     sufix_title += f"_{cfg.train_param.seed}-seed"
 
@@ -327,7 +327,7 @@ def run(cfg: DictConfig) -> None:
         "model": cfg.model.model,
         "supervised_ratio": cfg.train_param.supervised_ratio,
         "batch_size": cfg.train_param.batch_size,
-        "nb_epoch": cfg.train_param.nb_epoch,
+        "epochs": cfg.train_param.epochs,
         "learning_rate": cfg.train_param.learning_rate,
         "seed": cfg.train_param.seed,
         "ema_alpha": cfg.mt.alpha,

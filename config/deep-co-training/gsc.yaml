@@ -25,7 +25,7 @@ model:
 train_param:
   supervised_ratio: 0.1
   batch_size: 64
-  nb_epoch: 300
+  epochs: 300
   learning_rate: 0.0005
   seed: 1234
   resume: false
@@ -49,8 +49,8 @@ mixup:
   label: true
 
 path:
-  dataset_root: datasets
-  tensorboard_root: tensorboard
+  dataset_root: data
+  tensorboard_root: logs
   tensorboard_path: ${path.tensorboard_root}/${dataset.dataset}/deep-co-training
 
 tag: "NOTAG"

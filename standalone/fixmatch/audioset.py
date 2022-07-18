@@ -145,7 +145,7 @@ def run(cfg: DictConfig) -> DictConfig:
         cfg.dataset.dataset,
         "fixmatch",
         optimizer=optimizer,
-        nb_epoch=cfg.train_param.nb_iteration,
+        epochs=cfg.train_param.nb_iteration,
     )
     loss_sup = nn.BCEWithLogitsLoss(reduction="sum")
     loss_unsup = nn.BCEWithLogitsLoss(reduction="none")

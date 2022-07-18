@@ -90,7 +90,7 @@ def run(cfg: DictConfig) -> None:
 
     # -------- Prepare the model --------
     torch.cuda.empty_cache()  # type: ignore
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # type: ignore
+    device = torch.device("cuda" if cfg.hardware.nb_gpu > 0 and torch.cuda.is_available() else "cpu")  # type: ignore
 
     model_func = load_model(cfg.dataset.dataset, cfg.model.model)
 
@@ -119,14 +119,14 @@ def run(cfg: DictConfig) -> None:
         m1 = DataParallel(m1)
         m2 = DataParallel(m2)
 
-    summary(m1, input_shape)
+    summary(m1, input_shape, device=device.type)
 
     # -------- Tensorboard and checkpoint --------
     # -- Prepare suffix
     sufix_title = ""
     sufix_title += f"_{cfg.train_param.learning_rate}-lr"
     sufix_title += f"_{cfg.train_param.supervised_ratio}-sr"
-    sufix_title += f"_{cfg.train_param.nb_epoch}-e"
+    sufix_title += f"_{cfg.train_param.epochs}-e"
     sufix_title += f"_{cfg.train_param.batch_size}-bs"
     sufix_title += f"_{cfg.train_param.seed}-seed"
 
@@ -166,7 +166,7 @@ def run(cfg: DictConfig) -> None:
         cfg.dataset.dataset,
         "dct",
         optimizer=optimizer,
-        nb_epoch=cfg.train_param.nb_epoch,
+        epochs=cfg.train_param.epochs,
     )
 
     # Checkpoint
@@ -515,7 +515,7 @@ def run(cfg: DictConfig) -> None:
     print(header)
 
     start_epoch = checkpoint.epoch_counter
-    end_epoch = cfg.train_param.nb_epoch
+    end_epoch = cfg.train_param.epochs
 
     for e in range(start_epoch, end_epoch):
         train(e)
@@ -531,6 +531,8 @@ def run(cfg: DictConfig) -> None:
 
     if test_loader is not None:
         best_epoch = checkpoint.best_state["epoch"]
+        if best_epoch is None:
+            best_epoch = -1
         print(f"Loading best model for testing... ({best_epoch=})\n")
         checkpoint.load_best()
         test(best_epoch)
@@ -542,7 +544,7 @@ def run(cfg: DictConfig) -> None:
         "model": cfg.model.model,
         "supervised_ratio": cfg.train_param.supervised_ratio,
         "batch_size": cfg.train_param.batch_size,
-        "nb_epoch": cfg.train_param.nb_epoch,
+        "epochs": cfg.train_param.epochs,
         "learning_rate": cfg.train_param.learning_rate,
         "seed": cfg.train_param.seed,
         "epsilon": cfg.dct.epsilon,
@@ -558,9 +560,12 @@ def run(cfg: DictConfig) -> None:
     # convert all value to str
     hparams = dict(zip(hparams.keys(), map(str, hparams.values())))
 
-    prefixes = ["val"]
+    prefixes = []
+    if cfg.train_param.epochs > 0:
+        prefixes.append("val")
     if test_loader is not None:
         prefixes.append("test")
+
     metric_names = ("m1_acc", "m2_acc")
 
     final_metrics = {}
@@ -570,7 +575,8 @@ def run(cfg: DictConfig) -> None:
                 f"{prefix}/{metric_name}"
             ]
     final_metrics = {
-        k: v.tolist() if isinstance(v, Tensor) else v for k, v in final_metrics.items()
+        k: v.tolist() if isinstance(v, Tensor) else v
+        for k, v in final_metrics.items()
     }
 
     print()

@@ -36,14 +36,14 @@ def weighted_uniform_rule(
     return sup_steps, cot_steps, diff_steps
 
 
-def linear_rule(nb_epoch: int, steps: int = 10, plsup_mini: float = 0.0, **kwargs):
+def linear_rule(epochs: int, steps: int = 10, plsup_mini: float = 0.0, **kwargs):
     """The probability to apply each augmentation linearly increate or decrease during the training.
 
-    :param nb_epoch: The number of epoch the rule will be effective.
+    :param epochs: The number of epoch the rule will be effective.
     :param steps: The number of time the probabilities will be updated.
     :param plsup_mini: The minimum probability for the supervised loss.
     """
-    hop_length = np.linspace(0, nb_epoch, steps)
+    hop_length = np.linspace(0, epochs, steps)
 
     s_start, s_end = 1, plsup_mini
     c_start, c_end = 0, 0.5 - (plsup_mini / 2)
@@ -65,7 +65,7 @@ def linear_rule(nb_epoch: int, steps: int = 10, plsup_mini: float = 0.0, **kwarg
 
 
 def weighted_linear_rule(
-    nb_epoch: int,
+    epochs: int,
     steps: int = 10,
     plsup_mini=0.0,
     lambda_sup_max: int = 1,
@@ -76,7 +76,7 @@ def weighted_linear_rule(
     """The probability to apply each augmentation linearly increase or decrease during the training.
     Those probabilities are weighted using three lambda value.
 
-    :param nb_epoch: The number of epoch the rule will be effective.
+    :param epochs: The number of epoch the rule will be effective.
     :param steps: The number of time the probabilities will be updated.
     :param plsup_mini: The minimum probability for the supervised loss.
     :param lamdda_sup_max: Weight of the Lsup loss.
@@ -102,18 +102,18 @@ def weighted_linear_rule(
     return sup_steps, cot_steps, diff_steps
 
 
-def cosine_rule(nb_epoch: int, steps: int = 10, cycle: int = 1, **kwargs):
+def cosine_rule(epochs: int, steps: int = 10, cycle: int = 1, **kwargs):
     """The probability to apply each augmentation follow a cosinus curve.
 
-    :param nb_epoch: The number of epoch the rule will be effective.
+    :param epochs: The number of epoch the rule will be effective.
     :param steps: The number of time the probabilities will be updated.
     :param cycle: The number of half period the cosinus curve will follow.
     """
-    hop_length = np.linspace(0, nb_epoch, steps * cycle)
+    hop_length = np.linspace(0, epochs, steps * cycle)
 
-    sup_steps = 0.5 * (np.cos(np.pi * hop_length / (nb_epoch / cycle)) + 1)
-    cot_steps = 1 - (0.5 * (np.cos(np.pi * hop_length / (nb_epoch / cycle)) + 1))
-    diff_steps = 1 - (0.5 * (np.cos(np.pi * hop_length / (nb_epoch / cycle)) + 1))
+    sup_steps = 0.5 * (np.cos(np.pi * hop_length / (epochs / cycle)) + 1)
+    cot_steps = 1 - (0.5 * (np.cos(np.pi * hop_length / (epochs / cycle)) + 1))
+    diff_steps = 1 - (0.5 * (np.cos(np.pi * hop_length / (epochs / cycle)) + 1))
 
     # normalize
     for i in range(steps * cycle):
@@ -125,11 +125,11 @@ def cosine_rule(nb_epoch: int, steps: int = 10, cycle: int = 1, **kwargs):
     return sup_steps, cot_steps, diff_steps
 
 
-def weighted_cosine_rule(nb_epoch: int, steps: int = 10, cycle: int = 1, **kwargs):
+def weighted_cosine_rule(epochs: int, steps: int = 10, cycle: int = 1, **kwargs):
     """The probability to apply each augmentation follow a cosinus curve.
     Those probabilities are weighted using three lambda value.
 
-    :param nb_epoch: The number of epoch the rule will be effective.
+    :param epochs: The number of epoch the rule will be effective.
     :param steps: The number of time the probabilities will be updated.
     :param cycle: The number of half period the cosinus curve will follow.
     :param lamdda_sup_max: Weight of the Lsup loss.
@@ -138,11 +138,11 @@ def weighted_cosine_rule(nb_epoch: int, steps: int = 10, cycle: int = 1, **kwarg
     """
     lsm, lcm, ldm = lambda_sup_max, lambda_cot_max, lambda_diff_max
 
-    hop_length = np.linspace(0, nb_epoch, steps * cycle)
+    hop_length = np.linspace(0, epochs, steps * cycle)
 
-    sup_steps = 0.5 * (np.cos(np.pi * hop_length / (nb_epoch / cycle)) + 1)
-    cot_steps = 1 - (0.5 * (np.cos(np.pi * hop_length / (nb_epoch / cycle)) + 1))
-    diff_steps = 1 - (0.5 * (np.cos(np.pi * hop_length / (nb_epoch / cycle)) + 1))
+    sup_steps = 0.5 * (np.cos(np.pi * hop_length / (epochs / cycle)) + 1)
+    cot_steps = 1 - (0.5 * (np.cos(np.pi * hop_length / (epochs / cycle)) + 1))
+    diff_steps = 1 - (0.5 * (np.cos(np.pi * hop_length / (epochs / cycle)) + 1))
 
     sup_steps *= lsm
     cot_steps *= lcm
@@ -159,26 +159,26 @@ def weighted_cosine_rule(nb_epoch: int, steps: int = 10, cycle: int = 1, **kwarg
 
 
 def annealing_cosine_rule(
-    nb_epoch: int, steps: int = 10, cycle: int = 1, beta: float = 2, **kwargs
+    epochs: int, steps: int = 10, cycle: int = 1, beta: float = 2, **kwargs
 ):
     """The probability to apply each augmentation follow a cosinus curve that decay with time.
 
-    :param nb_epoch: The number of epoch the rule will be effective.
+    :param epochs: The number of epoch the rule will be effective.
     :param steps: The number of time the probabilities will be updated.
     :param cycle: The number of half period the cosinus curve will follow.
     :param beta: The decay rate that follow the equation e^(-beta * t)
     """
-    hop_length = np.linspace(0, nb_epoch, steps * cycle)
+    hop_length = np.linspace(0, epochs, steps * cycle)
 
     # create original steps
     decaying = np.exp(-beta * np.linspace(0, 1, len(hop_length)))
 
-    sup_steps = 0.5 * (decaying * np.cos(np.pi * hop_length / (nb_epoch / cycle)) + 1)
+    sup_steps = 0.5 * (decaying * np.cos(np.pi * hop_length / (epochs / cycle)) + 1)
     cot_steps = 1 - (
-        0.5 * (decaying * np.cos(np.pi * hop_length / (nb_epoch / cycle)) + 1)
+        0.5 * (decaying * np.cos(np.pi * hop_length / (epochs / cycle)) + 1)
     )
     diff_steps = 1 - (
-        0.5 * (decaying * np.cos(np.pi * hop_length / (nb_epoch / cycle)) + 1)
+        0.5 * (decaying * np.cos(np.pi * hop_length / (epochs / cycle)) + 1)
     )
 
     # normalize
@@ -192,12 +192,12 @@ def annealing_cosine_rule(
 
 
 def weighted_annealing_cosine_rule(
-    nb_epoch: int, steps: int = 10, cycle: int = 1, beta: float = 2, **kwargs
+    epochs: int, steps: int = 10, cycle: int = 1, beta: float = 2, **kwargs
 ):
     """The probability to apply each augmentation follow a cosinus curve that decay with time.
     Those probabilities are weighted using three lambda value.
 
-    :param nb_epoch: The number of epoch the rule will be effective.
+    :param epochs: The number of epoch the rule will be effective.
     :param steps: The number of time the probabilities will be updated.
     :param cycle: The number of half period the cosinus curve will follow.
     :param beta: The decay rate that follow the equation e^(-beta * t)
@@ -209,17 +209,17 @@ def weighted_annealing_cosine_rule(
     ldm = kwargs.get("lambda_diff_max", 1)
     lsm = kwargs.get("lambda_sup_max", 1)
 
-    hop_length = np.linspace(0, nb_epoch, steps * cycle)
+    hop_length = np.linspace(0, epochs, steps * cycle)
 
     # create original steps
     decaying = np.exp(-beta * np.linspace(0, 1, len(hop_length)))
 
-    sup_steps = 0.5 * (decaying * np.cos(np.pi * hop_length / (nb_epoch / cycle)) + 1)
+    sup_steps = 0.5 * (decaying * np.cos(np.pi * hop_length / (epochs / cycle)) + 1)
     cot_steps = 1 - (
-        0.5 * (decaying * np.cos(np.pi * hop_length / (nb_epoch / cycle)) + 1)
+        0.5 * (decaying * np.cos(np.pi * hop_length / (epochs / cycle)) + 1)
     )
     diff_steps = 1 - (
-        0.5 * (decaying * np.cos(np.pi * hop_length / (nb_epoch / cycle)) + 1)
+        0.5 * (decaying * np.cos(np.pi * hop_length / (epochs / cycle)) + 1)
     )
 
     sup_steps *= lsm
@@ -236,17 +236,17 @@ def weighted_annealing_cosine_rule(
     return sup_steps, cot_steps, diff_steps
 
 
-def sigmoid_rule(nb_epoch: int, steps: int = 10, **kwargs):
+def sigmoid_rule(epochs: int, steps: int = 10, **kwargs):
     """The probability to apply each augmentation increases or decreases following a sigmoid curve.
 
-    :param nb_epoch: The number of epoch the rule will be effective.
+    :param epochs: The number of epoch the rule will be effective.
     :param steps: The number of time the probabilities will be updated.
     """
-    hop_length = np.linspace(0, nb_epoch, steps)
+    hop_length = np.linspace(0, epochs, steps)
 
-    sup_steps = np.asarray([sigmoid_rampdown(x, nb_epoch) for x in hop_length])
-    cot_steps = np.asarray([sigmoid_rampup(x, nb_epoch) for x in hop_length])
-    diff_steps = np.asarray([sigmoid_rampup(x, nb_epoch) for x in hop_length])
+    sup_steps = np.asarray([sigmoid_rampdown(x, epochs) for x in hop_length])
+    cot_steps = np.asarray([sigmoid_rampup(x, epochs) for x in hop_length])
+    diff_steps = np.asarray([sigmoid_rampup(x, epochs) for x in hop_length])
 
     # normalize
     for i in range(steps):
@@ -258,11 +258,11 @@ def sigmoid_rule(nb_epoch: int, steps: int = 10, **kwargs):
     return sup_steps, cot_steps, diff_steps
 
 
-def weighted_sigmoid_rule(nb_epoch: int, steps: int = 10, **kwargs):
+def weighted_sigmoid_rule(epochs: int, steps: int = 10, **kwargs):
     """The probability to apply each augmentation increases or decreases following a sigmoid curve.
     Those probabilities are weighted using three lambda value.
 
-    :param nb_epoch: The number of epoch the rule will be effective.
+    :param epochs: The number of epoch the rule will be effective.
     :param steps: The number of time the probabilities will be updated.
     :param lamdda_sup_max: Weight of the Lsup loss.
     :param lambda_cot_max: Weight of the Lcot loss.
@@ -272,11 +272,11 @@ def weighted_sigmoid_rule(nb_epoch: int, steps: int = 10, **kwargs):
     ldm = kwargs.get("lambda_diff_max", 1)
     lsm = kwargs.get("lambda_sup_max", 1)
 
-    hop_length = np.linspace(0, nb_epoch, steps)
+    hop_length = np.linspace(0, epochs, steps)
 
-    sup_steps = np.asarray([lsm * sigmoid_rampdown(x, nb_epoch) for x in hop_length])
-    cot_steps = np.asarray([lcm * sigmoid_rampup(x, nb_epoch) for x in hop_length])
-    diff_steps = np.asarray([ldm * sigmoid_rampup(x, nb_epoch) for x in hop_length])
+    sup_steps = np.asarray([lsm * sigmoid_rampdown(x, epochs) for x in hop_length])
+    cot_steps = np.asarray([lcm * sigmoid_rampup(x, epochs) for x in hop_length])
+    diff_steps = np.asarray([ldm * sigmoid_rampup(x, epochs) for x in hop_length])
 
     # normalize
     for i in range(steps):
@@ -288,13 +288,13 @@ def weighted_sigmoid_rule(nb_epoch: int, steps: int = 10, **kwargs):
     return sup_steps, cot_steps, diff_steps
 
 
-def rule_maker(rule_fn, nb_epoch: int, steps: int = 10, **kwargs):
+def rule_maker(rule_fn, epochs: int, steps: int = 10, **kwargs):
     """Build the schedulers steps for all three loss using the array outputed by the rule functions.
     Can take any argument from any rule function.
     """
     p_lsup, p_lcot, p_ldiff = rule_fn(steps, **kwargs)
 
-    hop_length = np.linspace(0, nb_epoch, steps)
+    hop_length = np.linspace(0, epochs, steps)
 
     rules = dict()
     for i, epoch in enumerate(hop_length):

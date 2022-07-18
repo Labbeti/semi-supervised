@@ -95,7 +95,7 @@ def run(cfg: DictConfig) -> None:
 
     # -------- Prepare the model --------
     torch.cuda.empty_cache()  # type: ignore
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # type: ignore
+    device = torch.device("cuda" if cfg.hardware.nb_gpu > 0 and torch.cuda.is_available() else "cpu")  # type: ignore
 
     model_func = load_model(cfg.dataset.dataset, cfg.model.model)
 
@@ -115,21 +115,21 @@ def run(cfg: DictConfig) -> None:
     for p in teacher.parameters():
         p.detach_()
 
-    student = student.to(device)
-    teacher = teacher.to(device)
+    student = student.eval().to(device)
+    teacher = teacher.eval().to(device)
 
     if cfg.hardware.nb_gpu > 1:
         student = DataParallel(student)
         teacher = DataParallel(teacher)
 
-    summary(student, input_shape)
+    summary(student, input_shape, device=device.type)
 
     # -------- Tensorboard and checkpoint --------
     # -- Prepare suffix
     sufix_title = ""
     sufix_title += f"_{cfg.train_param.learning_rate}-lr"
     sufix_title += f"_{cfg.train_param.supervised_ratio}-sr"
-    sufix_title += f"_{cfg.train_param.nb_epoch}-e"
+    sufix_title += f"_{cfg.train_param.epochs}-e"
     sufix_title += f"_{cfg.train_param.batch_size}-bs"
     sufix_title += f"_{cfg.train_param.seed}-seed"
 
@@ -170,7 +170,7 @@ def run(cfg: DictConfig) -> None:
         cfg.dataset.dataset,
         "mean-teacher",
         optimizer=optimizer,
-        nb_epoch=cfg.train_param.nb_epoch,
+        epochs=cfg.train_param.epochs,
     )
     loss_ce = nn.CrossEntropyLoss(reduction="mean")  # Supervised loss
 
@@ -244,34 +244,28 @@ def run(cfg: DictConfig) -> None:
     else:
         ccost_activation = nn.Identity()
 
+    if cfg.mt.use_buffer_sync:
+        for (_, buffer), (_, ema_buffer) in zip(
+            student.named_buffers(),
+            teacher.named_buffers(),
+        ):
+            ema_buffer.set_(buffer.storage())
+
     # update the teacher using exponentiel moving average
     def update_teacher_model(
-        student_model: nn.Module,
-        teacher_model: nn.Module,
-        alpha: float,
-        epoch: int,
+        student_model: nn.Module, teacher_model: nn.Module, alpha: float, epoch: int,
     ) -> None:
         # Use the true average until the exponential average is more correct
         alpha = min(1 - 1 / (epoch + 1), alpha)
 
         for param, ema_param in zip(
-            student_model.parameters(),
-            teacher_model.parameters(),
+            student_model.parameters(), teacher_model.parameters(),
         ):
             ema_param.data.mul_(alpha).add_(param.data, alpha=1 - alpha)
 
-        # TODO : sync buffers ?
-        # for (_, buffer), (_, ema_buffer) in zip(
-        #     student_model.named_buffers(),
-        #     teacher_model.named_buffers(),
-        # ):
-        #     ema_buffer.set_(buffer.storage())
-
     # For applying mixup
     mixup_fn = MixUpBatchShuffle(
-        alpha=cfg.mixup.alpha,
-        apply_max=cfg.mixup.max,
-        mix_labels=cfg.mixup.label,
+        alpha=cfg.mixup.alpha, apply_max=cfg.mixup.max, mix_labels=cfg.mixup.label,
     )
 
     def noise_fn(x: Tensor) -> Tensor:
@@ -286,7 +280,8 @@ def run(cfg: DictConfig) -> None:
 
         reset_metrics(metrics)
         student.train()
-        teacher.train()
+        if not cfg.mt.use_buffer_sync:
+            teacher.train()
 
         for i, (batch_s, batch_u) in enumerate(train_loader):
             if has_same_trans:
@@ -437,7 +432,8 @@ def run(cfg: DictConfig) -> None:
                 loss = loss_ce(student_logits, y)
                 teacher_loss = loss_ce(teacher_logits, y)  # for metrics only
                 ccost = consistency_cost(
-                    ccost_activation(student_logits), ccost_activation(teacher_logits)
+                    ccost_activation(student_logits),
+                    ccost_activation(teacher_logits),
                 )
 
                 # Compute the metrics
@@ -602,7 +598,7 @@ def run(cfg: DictConfig) -> None:
         checkpoint.load_last()
 
     start_epoch = checkpoint.epoch_counter
-    end_epoch = cfg.train_param.nb_epoch
+    end_epoch = cfg.train_param.epochs
 
     for e in range(start_epoch, end_epoch):
         train(e)
@@ -612,6 +608,8 @@ def run(cfg: DictConfig) -> None:
 
     if test_loader is not None:
         best_epoch = checkpoint.best_state["epoch"]
+        if best_epoch is None:
+            best_epoch = -1
         print(f"Loading best model for testing... ({best_epoch=})\n")
         checkpoint.load_best()
         test(best_epoch)
@@ -623,7 +621,7 @@ def run(cfg: DictConfig) -> None:
         "model": cfg.model.model,
         "supervised_ratio": cfg.train_param.supervised_ratio,
         "batch_size": cfg.train_param.batch_size,
-        "nb_epoch": cfg.train_param.nb_epoch,
+        "epochs": cfg.train_param.epochs,
         "learning_rate": cfg.train_param.learning_rate,
         "seed": cfg.train_param.seed,
         "ema_alpha": cfg.mt.alpha,

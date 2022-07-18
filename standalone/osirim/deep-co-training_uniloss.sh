@@ -108,7 +108,7 @@ commun_args="\${commun_args} --dataset ${DATASET}"
 commun_args="\${commun_args} --model ${MODEL}"
 
 commun_args="\${commun_args} --supervised_ratio ${RATIO}"
-commun_args="\${commun_args} --nb_epoch ${EPOCH}"
+commun_args="\${commun_args} --epochs ${EPOCH}"
 commun_args="\${commun_args} --batch_size ${BS}"
 commun_args="\${commun_args} --learning_rate ${LR}"
 

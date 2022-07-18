@@ -26,7 +26,7 @@ function show_help {
 # default parameters
 MODEL=cnn03
 RATIO=0.1
-NB_EPOCH=200
+epochs=200
 LEARNING_RATE=0.003
 RESUME=0
 NODE=" "
@@ -36,7 +36,7 @@ while getopts "n:m:r:e:l:a::R::h" arg; do
     n) NODE=$OPTARG;;
     m) MODEL=$OPTARG;;
     r) RATIO=$OPTARG;;
-    e) NB_EPOCH=$OPTARG;;
+    e) epochs=$OPTARG;;
     l) LEARNING_RATE=$OPTARG;;
     R) RESUME=1;;
     a) AUGMENT+=("$OPTARG");;
@@ -108,7 +108,7 @@ parameters="\${parameters} --model ${MODEL}"
 
 # -------- training parameters --------
 parameters="\${parameters} --supervised_ratio ${RATIO}"
-parameters="\${parameters} --nb_epoch ${NB_EPOCH}"
+parameters="\${parameters} --epochs ${epochs}"
 parameters="\${parameters} --learning_rate ${LEARNING_RATE}"
 
 # -------- augmentations --------

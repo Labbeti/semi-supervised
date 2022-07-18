@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LambdaLR
 

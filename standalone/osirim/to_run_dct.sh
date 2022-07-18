@@ -1,4 +1,4 @@
-t_args="--learning_rate 0.0005 --batch_size 64 --nb_epoch 300 --supervised_ratio 0.1"
+t_args="--learning_rate 0.0005 --batch_size 64 --epochs 300 --supervised_ratio 0.1"
 dct_args="--lambda_cot_max 1 --lambda_diff_max 0.5 --warmup_length 160 --epsilon 0.02"
 m_args="--mixup --mixup_alpha 0.4"
 

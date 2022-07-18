@@ -1,6 +1,6 @@
 # ------------------- CONSTANT PARAMETERS ----------------------
 # training_parameters
-T_ARGS="--supervised_ratio 0.1 --batch_size 100 --nb_epoch 300"
+T_ARGS="--supervised_ratio 0.1 --batch_size 100 --epochs 300"
 T_ARGS="${T_ARGS} --learning_rate 0.0005 --seed 1234"
 
 # DCT parameters
@@ -25,7 +25,7 @@ TOTAL_ARGS="${T_ARGS} ${DCT_ARGS} ${MT_ARGS}"
 # bash deep-co-training_teacher.sh wideresnet28_2 ubs8k ${TOTAL_ARGS} --fusion_method arithmetic_mean -C -p RTX6000Node
 # bash deep-co-training_teacher.sh wideresnet28_2 ubs8k ${TOTAL_ARGS} --fusion_method geometric_mean -C -p RTX6000Node
 
-# TOTAL_ARGS="--supervised_ratio 0.1 --batch_size 100 --nb_epoch 150 --learning_rate 0.0005 --seed 1234"
+# TOTAL_ARGS="--supervised_ratio 0.1 --batch_size 100 --epochs 150 --learning_rate 0.0005 --seed 1234"
 # TOTAL_ARGS="$TOTAL_ARGS --lambda_cot_max 1 --lambda_diff_max 0.5 --warmup_length 160 --epsilon 0.02"
 # TOTAL_ARGS="$TOTAL_ARGS --ema_alpha 0.999 --teacher_noise 0 --lambda_ccost_max 1"
 # 
@@ -39,7 +39,7 @@ TOTAL_ARGS="${T_ARGS} ${DCT_ARGS} ${MT_ARGS}"
 # === === === === === === === === === === === === === === === === === === === === === === === === === === ===
 #  GRID SEARCH
 # === === === === === === === === === === === === === === === === === === === === === === === === === === ===
-fix_params="--supervised_ratio 0.1 --batch_size 256 --nb_epoch 300 --seed 1234"
+fix_params="--supervised_ratio 0.1 --batch_size 256 --epochs 300 --seed 1234"
 
 loss_cot_method=("js" "mse")
 ccost_method=("js" "mse")

@@ -26,7 +26,7 @@ model:
 train_param:
   supervised_ratio: 0.1
   batch_size: 64
-  nb_epoch: 200
+  epochs: 200
   learning_rate: 0.001
   seed: 1234
   resume: false
@@ -43,6 +43,7 @@ mt:
   use_softmax: true
   ccost_method: mse
   noise_db: 0.0
+  use_buffer_sync: false
 
 # MixUp parameters
 mixup:
@@ -52,8 +53,8 @@ mixup:
   label: true
 
 path:
-  dataset_root: datasets
-  tensorboard_root: tensorboard
+  dataset_root: data
+  tensorboard_root: logs
   tensorboard_path: ${path.tensorboard_root}/${dataset.dataset}/mean-teacher
 
 tag: "NOTAG"

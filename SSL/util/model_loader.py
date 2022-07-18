@@ -3,6 +3,11 @@
 
 import inspect
 
+from types import ModuleType
+from typing import Callable, List
+
+from torch import nn
+
 import SSL.models.audioset as a
 import SSL.models.ComParE2021_PRS as c
 import SSL.models.esc as esc
@@ -24,8 +29,7 @@ dataset_mapper = {
 }
 
 
-def get_model_from_name(model_name, module_list):
-
+def get_model_from_name(model_name: str, module_list: List[ModuleType]) -> Callable[..., nn.Module]:
     all_members = []
     for module in module_list:
         all_members += inspect.getmembers(module)
@@ -46,7 +50,7 @@ def get_model_from_name(model_name, module_list):
     raise ValueError(msg)
 
 
-def load_model(dataset_name: str, model_name: str):
+def load_model(dataset_name: str, model_name: str) -> Callable[..., nn.Module]:
     dataset_name = dataset_name.lower()
 
     if dataset_name not in dataset_mapper:

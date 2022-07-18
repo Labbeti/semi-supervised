@@ -129,7 +129,7 @@ parameters="\${parameters} --model ${MODEL}"
 
 # -------- training parameters --------
 parameters="\${parameters} --supervised_ratio ${RATIO}"
-parameters="\${parameters} --nb_epoch ${EPOCH}"
+parameters="\${parameters} --epochs ${EPOCH}"
 parameters="\${parameters} --learning_rate ${LEARNING_RATE}"
 
 # -------- augmentations --------

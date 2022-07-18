@@ -128,7 +128,7 @@ def run(cfg: DictConfig) -> DictConfig:
         cfg.dataset.dataset,
         "supervised",
         optimizer=optimizer,
-        nb_epoch=cfg.train_param.nb_iteration,
+        epochs=cfg.train_param.nb_iteration,
     )
     loss_ce = nn.BCEWithLogitsLoss(reduction="mean")
 
