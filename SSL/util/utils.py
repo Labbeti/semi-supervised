@@ -100,7 +100,7 @@ def get_training_printers(
     return header, train_form, val_form, test_form
 
 
-def get_train_format(framework: str = "supervised"):
+def get_train_format(framework: str = "supervised") -> Tuple[str, str, str]:
     assert framework in [
         "supervised",
         "mean-teacher",

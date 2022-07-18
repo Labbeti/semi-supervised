@@ -265,7 +265,7 @@ def run(cfg: DictConfig) -> None:
         #     student_model.named_buffers(),
         #     teacher_model.named_buffers(),
         # ):
-        #     ema_buffer.data.set_(buffer.data.storage())
+        #     ema_buffer.set_(buffer.storage())
 
     # For applying mixup
     mixup_fn = MixUpBatchShuffle(
@@ -274,9 +274,13 @@ def run(cfg: DictConfig) -> None:
         mix_labels=cfg.mixup.label,
     )
 
+    def noise_fn(x: Tensor) -> Tensor:
+        noise_db = cfg.mt.noise_db
+        return x + torch.rand_like(x) * noise_db + noise_db
+
     def train(epoch: int) -> None:
         start_time = time.time()
-        print("")
+        print()
 
         nb_batch = len(train_loader)
 
@@ -300,6 +304,10 @@ def run(cfg: DictConfig) -> None:
             if cfg.mixup.use:
                 tea_xs, _ = mixup_fn(tea_xs, ys)
                 tea_xu, _ = mixup_fn(tea_xu, yu)
+
+            if cfg.mt.noise_db > 0.0:
+                tea_xs = noise_fn(tea_xs)
+                tea_xu = noise_fn(tea_xu)
 
             stu_xs = stu_xs.to(device).float()
             stu_xu = stu_xu.to(device).float()
