@@ -578,6 +578,10 @@ def run(cfg: DictConfig) -> None:
     print("Scores:")
     print(yaml.dump(final_metrics, sort_keys=False))
 
+    metrics_fpath = osp.join(tensorboard.log_dir, "metrics.yaml")
+    with open(metrics_fpath, "w") as file:
+        yaml.dump(final_metrics, file)
+
     tensorboard.add_hparams(hparams, final_metrics)
 
     tensorboard.flush()
