@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import math
 import numpy as np
 
 
@@ -19,7 +23,7 @@ def cosine_rampup(current_epoch, ramp_length):
     if current_epoch >= ramp_length:
         return 1.0
 
-    return -float(0.5 * (np.cos(np.pi * current_epoch / ramp_length) - 1))
+    return -float(0.5 * (math.cos(math.pi * current_epoch / ramp_length) - 1))
 
 
 def sigmoid_rampup(current_epoch, ramp_length):
@@ -35,7 +39,7 @@ def sigmoid_rampup(current_epoch, ramp_length):
 
     current = np.clip(current_epoch, 0.0, ramp_length)
     phase = 1.0 - current / ramp_length
-    return float(np.exp(-5.0 * phase * phase))
+    return float(math.exp(-5.0 * phase * phase))
 
 
 def sigmoid_rampdown(current_epoch, ramp_length):
@@ -47,7 +51,7 @@ def sigmoid_rampdown(current_epoch, ramp_length):
 
     current = np.clip(current_epoch, 0.0, ramp_length)
     phase = 1.0 - (current / ramp_length)
-    return 1 - float(np.exp(-5.0 * phase ** 2))
+    return 1 - float(math.exp(-5.0 * phase ** 2))
 
 
 class Warmup:
@@ -60,7 +64,7 @@ class Warmup:
 
     def reset(self):
         self.current_epoch = 0
-        self.value = method(0, epochs)
+        self.value = self.method(0, self.epochs)
 
     def step(self):
         if self.current_epoch < self.epochs:

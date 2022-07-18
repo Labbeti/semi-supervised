@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import augmentation_utils.spec_augmentations as spec_aug
 import augmentation_utils.signal_augmentations as signal_aug
 

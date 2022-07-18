@@ -39,13 +39,13 @@ tensorboard_root="/users/samova/elabbe/root_sslh/semi-supervised/logs"
 
 common="--config-name ${data} path.dataset_root=${dataset_root} path.tensorboard_root=${tensorboard_root}"
 
-# Re-run DCT uweak
+# Re-run DCT+mixup+uweak
 method="deep-co-training"
 aug_s="ident"
 aug_u="weak"
 ./run.sh ${method} ${common} augpool@aug_s=${aug_s} augpool@aug_u=${aug_u} tag="${rd}_data_${data}__method_${method}__aug_s_${aug_s}__aug_u_${aug_u}"
 
-# Run MT with buffer sync
+# Run MT+mixup with buffer sync
 method="mean-teacher"
 stu_aug="ident"
 tea_aug="ident"

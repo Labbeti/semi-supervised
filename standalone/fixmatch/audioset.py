@@ -7,9 +7,9 @@ import time
 from typing import Union
 import numpy
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.utils.data as data
-import torch.nn.functional as F
+from torch.nn import functional as F
 import torchvision.transforms as transforms
 from torch import Tensor
 from torch.optim.lr_scheduler import LambdaLR

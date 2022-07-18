@@ -48,7 +48,9 @@ def _get_ubs8k_transforms(
     else:
         post_trans = None
 
-    train_transform = compose_augment(train_pool, transform_to_spec, pre_trans, post_trans)
+    train_transform = compose_augment(
+        train_pool, transform_to_spec, pre_trans, post_trans
+    )
     val_transform = transform_to_spec
     return train_transform, val_transform  # type: ignore
 

@@ -1,9 +1,14 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import random
 
+from typing import Callable, Optional
+
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from typing import Callable
+
+from torch import nn
+from torch.nn import functional as F
 
 
 class ToTensor(nn.Module):
@@ -45,12 +50,15 @@ class Squeeze(nn.Module):
 
 
 class Mean(nn.Module):
-    def __init__(self, dim):
+    def __init__(self, dim: Optional[int]) -> None:
         super().__init__()
         self.dim = dim
 
     def forward(self, x):
-        return torch.mean(x, dim=self.dim)
+        if self.dim is not None:
+            return torch.mean(x, dim=self.dim)
+        else:
+            return torch.mean(x)
 
 
 class ComposeAugmentation:

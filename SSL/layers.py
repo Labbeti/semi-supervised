@@ -1,5 +1,9 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import torch
-import torch.nn as nn
+
+from torch import nn
 
 
 class DenseConvBlock(nn.Module):
@@ -105,31 +109,6 @@ class Sequential_adv(nn.Sequential):
             else:
                 inputs = module(inputs)
         return inputs
-
-
-class ConvPoolReLU(nn.Sequential):
-    def __init__(
-        self,
-        in_size,
-        out_size,
-        kernel_size,
-        stride,
-        padding,
-        pool_kernel_size,
-        pool_stride,
-    ):
-        super(ConvPoolReLU, self).__init__(
-            nn.Conv2d(
-                in_size,
-                out_size,
-                kernel_size=kernel_size,
-                stride=stride,
-                padding=padding,
-            ),
-            nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride),
-            nn.BatchNorm2d(out_size),
-            nn.ReLU6(inplace=True),
-        )
 
 
 class ConvAdvBNReLUPool(nn.Module):

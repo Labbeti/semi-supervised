@@ -12,8 +12,8 @@ import time
 
 import hydra
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from torch import nn
+from torch.nn import functional as F
 
 from omegaconf import DictConfig, OmegaConf
 from torch.nn.parallel import DataParallel

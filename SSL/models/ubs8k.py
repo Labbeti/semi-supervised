@@ -1,6 +1,6 @@
 import numpy as np
 
-import torch.nn as nn
+from torch import nn
 import librosa
 
 from SSL.layers import ConvPoolReLU, ConvReLU, ConvBNReLUPool, ConvAdvBNReLUPool

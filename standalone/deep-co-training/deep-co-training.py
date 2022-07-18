@@ -163,10 +163,7 @@ def run(cfg: DictConfig) -> None:
         learning_rate=cfg.train_param.learning_rate,
     )
     callbacks = load_callbacks(
-        cfg.dataset.dataset,
-        "dct",
-        optimizer=optimizer,
-        epochs=cfg.train_param.epochs,
+        cfg.dataset.dataset, "dct", optimizer=optimizer, epochs=cfg.train_param.epochs,
     )
 
     # Checkpoint
@@ -576,8 +573,7 @@ def run(cfg: DictConfig) -> None:
                 f"{prefix}/{metric_name}"
             ]
     final_metrics = {
-        k: v.tolist() if isinstance(v, Tensor) else v
-        for k, v in final_metrics.items()
+        k: v.tolist() if isinstance(v, Tensor) else v for k, v in final_metrics.items()
     }
 
     print()

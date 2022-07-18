@@ -4,8 +4,8 @@
 import torchvision.models as torch_models
 import torch
 import time
-import torch.nn as nn
-import torch.nn.functional as F
+from torch import nn
+from torch.nn import functional as F
 from torchvision.models.resnet import Bottleneck, BasicBlock
 from SSL.models.wideresnet import ResNet
 from torchlibrosa.augmentation import SpecAugmentation

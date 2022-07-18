@@ -1,7 +1,7 @@
 import numpy as np
 
-import torch.nn.functional as F
-import torch.nn as nn
+from torch.nn import functional as F
+from torch import nn
 import librosa
 
 from SSL.layers import (

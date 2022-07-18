@@ -10,8 +10,8 @@ os.environ["OMP_NUM_THREADS"] = "2"
 import time
 from typing import Union
 import torch
-import torch.nn.functional as F
-import torch.nn as nn
+from torch.nn import functional as F
+from torch import nn
 from torchsummary import summary
 from SSL.util.model_loader import load_model
 from SSL.util.loaders import (

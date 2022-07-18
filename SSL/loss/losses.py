@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Tuple, Optional
 
 import torch
-import torch.nn as nn
+from torch import nn
 from torch import Tensor
 
 

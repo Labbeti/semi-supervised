@@ -29,7 +29,9 @@ dataset_mapper = {
 }
 
 
-def get_model_from_name(model_name: str, module_list: List[ModuleType]) -> Callable[..., nn.Module]:
+def get_model_from_name(
+    model_name: str, module_list: List[ModuleType]
+) -> Callable[..., nn.Module]:
     all_members = []
     for module in module_list:
         all_members += inspect.getmembers(module)

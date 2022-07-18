@@ -1,7 +1,7 @@
 import numpy as np
 
 import torch
-import torch.nn as nn
+from torch import nn
 import librosa
 
 from ubs8k.datasetManager import DatasetManager, conditional_cache_v2

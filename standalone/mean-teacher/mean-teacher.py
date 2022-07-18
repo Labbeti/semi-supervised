@@ -14,8 +14,8 @@ from typing import Any, Dict, Union
 
 import hydra
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from torch import nn
+from torch.nn import functional as F
 import yaml
 
 from omegaconf import DictConfig, OmegaConf
@@ -63,7 +63,10 @@ def run(cfg: DictConfig) -> None:
         cfg.dataset.dataset, "mean-teacher", aug_cfg=cfg.stu_aug,
     )
     teacher_transform, _ = load_preprocesser(
-        cfg.dataset.dataset, "mean-teacher", aug_cfg=cfg.tea_aug, pre_trans_cfg=cfg.pre_trans,
+        cfg.dataset.dataset,
+        "mean-teacher",
+        aug_cfg=cfg.tea_aug,
+        pre_trans_cfg=cfg.pre_trans,
     )
     has_same_trans = cfg.stu_aug == cfg.tea_aug
 
@@ -246,21 +249,17 @@ def run(cfg: DictConfig) -> None:
 
     if cfg.mt.use_buffer_sync:
         for (_, buffer), (_, ema_buffer) in zip(
-            student.named_buffers(),
-            teacher.named_buffers(),
+            student.named_buffers(), teacher.named_buffers(),
         ):
             assert not ema_buffer.requires_grad and not buffer.requires_grad
             ema_buffer.set_(buffer.storage())
 
     # Update the teacher using exponentiel moving average
     def update_teacher_model(
-        student_model: nn.Module,
-        teacher_model: nn.Module,
-        alpha: float,
+        student_model: nn.Module, teacher_model: nn.Module, alpha: float,
     ) -> None:
         for stu_param, tea_param in zip(
-            student_model.parameters(),
-            teacher_model.parameters(),
+            student_model.parameters(), teacher_model.parameters(),
         ):
             tea_param.data.mul_(alpha).add_(stu_param.data, alpha=1 - alpha)
 
@@ -429,8 +428,7 @@ def run(cfg: DictConfig) -> None:
                 loss = loss_ce(student_logits, y)
                 teacher_loss = loss_ce(teacher_logits, y)  # for metrics only
                 ccost = consistency_cost(
-                    ccost_activation(student_logits),
-                    ccost_activation(teacher_logits),
+                    ccost_activation(student_logits), ccost_activation(teacher_logits),
                 )
 
                 # Compute metrics
@@ -480,9 +478,15 @@ def run(cfg: DictConfig) -> None:
         tensorboard.add_scalar(f"{prefix}/teacher_acc", teacher_acc, epoch)
         tensorboard.add_scalar(f"{prefix}/teacher_f1", teacher_fscore, epoch)
 
-        tensorboard.add_scalar(f"{prefix}/student_loss", metrics.avg.sce.mean(size=None), epoch)
-        tensorboard.add_scalar(f"{prefix}/teacher_loss", metrics.avg.tce.mean(size=None), epoch)
-        tensorboard.add_scalar(f"{prefix}/consistency_cost", metrics.avg.ccost.mean(size=None), epoch)
+        tensorboard.add_scalar(
+            f"{prefix}/student_loss", metrics.avg.sce.mean(size=None), epoch
+        )
+        tensorboard.add_scalar(
+            f"{prefix}/teacher_loss", metrics.avg.tce.mean(size=None), epoch
+        )
+        tensorboard.add_scalar(
+            f"{prefix}/consistency_cost", metrics.avg.ccost.mean(size=None), epoch
+        )
 
         tensorboard.add_scalar("hparams/learning_rate", get_lr(optimizer), epoch)
         tensorboard.add_scalar("hparams/lambda_cost_max", lambda_cost(), epoch)
