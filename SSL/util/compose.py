@@ -114,8 +114,9 @@ def add_transform_to_spec_to_pool(
                 transforms.append(transform_to_spec)
                 transforms.append(augm)
             else:
+                INPUT_TYPES = ("waveform", "spectrogram")
                 raise ValueError(
-                    f'Invalid input type "{input_type}". Must be one of {("waveform", "spectrogram")}.'
+                    f'Invalid value {input_type=}. Must be one of {INPUT_TYPES}.'
                 )
         else:
             transforms.append(transform_to_spec)

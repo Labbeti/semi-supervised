@@ -61,5 +61,5 @@ tea_aug="ident"
 pre_trans="noise"
 use_mixup="false"
 
-args="augpool@stu_aug=${stu_aug} augpool@tea_aug=${tea_aug} augpool@pre_trans=${pre_trans} mt.use_mixup=${use_mixup}"
+args="augpool@stu_aug=${stu_aug} augpool@tea_aug=${tea_aug} aug@pre_trans=${pre_trans} mt.use_mixup=${use_mixup}"
 ./run.sh ${method} ${common} ${args} tag="${rd}_data_${data}__method_${method}__stu_aug_${stu_aug}__tea_aug_${tea_aug}__pre_trans_${pre_trans}__use_mixup_${use_mixup}"
