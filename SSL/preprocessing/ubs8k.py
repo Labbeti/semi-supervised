@@ -30,10 +30,10 @@ def _get_ubs8k_transforms(
     if aug_cfg is not None:
         train_pool = []
         for aug_cfg_i in aug_cfg:
-            type_and_aug = {
-                "type": aug_cfg_i["type"],
-                "aug": hydra.utils.instantiate(aug_cfg_i["aug"]),
-            }
+            type_and_aug = (
+                aug_cfg_i["type"],
+                hydra.utils.instantiate(aug_cfg_i["aug"]),
+            )
             train_pool.append(type_and_aug)
     else:
         train_pool = []
