@@ -1,0 +1,9 @@
+# @package aug
+
+_target_: "SSL.utils.augments.spec_aug.SpecAugmentation"
+
+time_drop_width: 64
+time_stripes_num: 2
+freq_drop_width: 2
+freq_stripes_num: 1
+p: 1.0

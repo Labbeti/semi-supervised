@@ -3,6 +3,7 @@
 
 import functools
 import itertools
+import math
 import random
 
 from typing import Optional, Tuple
@@ -100,7 +101,7 @@ def class_balance_split(
 
     # expected occurance and tolerance
     total_occur = np.sum(all_targets, axis=0)
-    s_expected_occur = np.ceil(total_occur * supervised_ratio)
+    s_expected_occur = np.ceil(total_occur * supervised_ratio)  # type: ignore
     print(f"{s_expected_occur=}")
     print(f"{sum(s_expected_occur)=}")
 

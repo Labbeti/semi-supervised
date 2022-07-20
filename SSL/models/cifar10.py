@@ -1,12 +1,11 @@
-import numpy as np
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import torch
-from torch import nn
-import librosa
 
-from ubs8k.datasetManager import DatasetManager, conditional_cache_v2
-from SSL.layers import ConvPoolReLU, ConvReLU, ConvBNReLUPool, ConvAdvBNReLUPool
-from .wideresnet import ResNet
+from torch import nn
+
+from SSL.models.wideresnet import ResNet
 
 # =============================================================================
 #    PyTorch WIDE RESNET

@@ -34,7 +34,7 @@ from SSL.util.utils import (
 )
 from SSL.util.mixup import MixUpBatchShuffle
 from SSL.loss import FixMatchLoss
-from SSL.ramps import Warmup, sigmoid_rampup
+from SSL.util.ramps import Warmup, sigmoid_rampup
 from metric_utils.metrics import BinaryAccuracy, FScore, ContinueAverage, MAP
 from augmentation_utils.spec_augmentations import SpecAugment
 from torch.cuda import empty_cache

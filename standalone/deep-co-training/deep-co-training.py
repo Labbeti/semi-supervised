@@ -26,7 +26,7 @@ from torchsummary import summary
 
 from metric_utils.metrics import ContinueAverage, CategoricalAccuracy, FScore, Ratio
 from SSL.loss import loss_cot, loss_diff, loss_sup
-from SSL.ramps import Warmup, sigmoid_rampup
+from SSL.util.ramps import Warmup, sigmoid_rampup
 from SSL.util.checkpoint import CheckPoint, CustomSummaryWriter
 from SSL.util.loaders import (
     load_callbacks,

@@ -1,28 +1,36 @@
-import os
-import torch
-import numpy
-from tqdm import tqdm, trange
-import h5py
-import random
-from typing import Tuple, List
-from torch import Tensor
-from torch.nn import Module
-from torch.utils.data import Dataset, DataLoader, Sampler, SubsetRandomSampler
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import functools
 import itertools
-from SSL.util.utils import cache_to_disk, ZipCycle, ZipCycleInfinite
+import os
+import random
+
+from typing import List, Optional, Tuple
+
+import h5py
+import numpy as np
+import torch
+
+from tqdm import tqdm, trange
+from torch import nn, Tensor
+from torch.utils.data.dataloader import DataLoader
+from torch.utils.data.dataset import Dataset
+from torch.utils.data.sampler import Sampler, SubsetRandomSampler
+
+from SSL.util.utils import cache_to_disk, ZipCycleInfinite
 
 
 class Audioset(Dataset):
     def __init__(
         self,
-        root,
-        transform: Module = None,
+        root: str,
+        transform: Optional[nn.Module] = None,
         version: str = "unbalanced",
         rdcc_nbytes: int = 512 * 1024 ** 2,
         data_shape: tuple = (320000,),
         data_key: str = "waveform",
-    ):
+    ) -> None:
         """
         A pytorch dataset of Google AUdioset.
 
@@ -138,10 +146,10 @@ class Audioset(Dataset):
         self.hdf_chunk_size = self.hdf_mapper[name]["audio_name"].chunks[0]
 
         targets_path = os.path.join(self.hdf_root, "targets.npy")
-        self.targets = numpy.load(targets_path)[()]
+        self.targets = np.load(targets_path)[()]
 
         audio_names_path = os.path.join(self.hdf_root, "audio_names.npy")
-        self.audio_names = numpy.load(audio_names_path)
+        self.audio_names = np.load(audio_names_path)
 
     def _close_hdfs(self):
         for hdf_file in self.hdf_mapper.values():
@@ -179,7 +187,7 @@ class Audioset(Dataset):
 
     def _get_location(self, sample_idx: int) -> Tuple[h5py.File, int, str]:
         hdf_names = list(self.hdf_mapper.keys())
-        cumulative_nb_chunk = numpy.cumsum(list(self.hdf_nb_chunk.values()))
+        cumulative_nb_chunk = np.cumsum(list(self.hdf_nb_chunk.values()))
 
         # find the chunk which contain the sample (at the dataset level)
         global_chunk_idx = sample_idx // self.hdf_chunk_size
@@ -197,13 +205,13 @@ class Audioset(Dataset):
                     hdf_name = hdf_names[i]
                     return self.hdf_mapper[hdf_name], local_chunk_idx, hdf_name
 
-    def _read_chunk(self, hdf_file, chunk_idx) -> Tuple[numpy.ndarray, numpy.ndarray]:
+    def _read_chunk(self, hdf_file, chunk_idx) -> Tuple[np.ndarray, np.ndarray]:
         start = chunk_idx * self.hdf_chunk_size
         end = start + self.hdf_chunk_size
 
-        targets = numpy.zeros(shape=(self.hdf_chunk_size, 527), dtype=bool)
-        waveforms = numpy.zeros(
-            shape=(self.hdf_chunk_size, *self.data_shape), dtype=numpy.int16
+        targets = np.zeros(shape=(self.hdf_chunk_size, 527), dtype=bool)
+        waveforms = np.zeros(
+            shape=(self.hdf_chunk_size, *self.data_shape), dtype=np.int16
         )
 
         hdf_file["target"].read_direct(targets, slice(start, end), None)
@@ -283,7 +291,7 @@ class SingleBalancedSampler:
         class_indexes = [[] for _ in range(527)]
 
         for sample_idx, target in zip(self.index_list, self.all_targets):
-            target_idx = numpy.where(target == 1)[0]
+            target_idx = np.where(target == 1)[0]
 
             for t_idx in target_idx:
                 class_indexes[t_idx].append(sample_idx)
@@ -363,7 +371,7 @@ class ChunkAlignSampler(object):
         hdf_batches = []
 
         for nb_sample in hdf_nb_sample:
-            indexes = numpy.arange(start_idx, start_idx + nb_sample)
+            indexes = np.arange(start_idx, start_idx + nb_sample)
 
             extra = len(indexes) % self.batch_size
             if extra != 0:
@@ -371,7 +379,7 @@ class ChunkAlignSampler(object):
 
             hdf_nb_batch = len(indexes) // self.batch_size
 
-            hdf_batches.append(numpy.split(indexes, hdf_nb_batch))
+            hdf_batches.append(np.split(indexes, hdf_nb_batch))
             start_idx += nb_sample
 
         return hdf_batches
@@ -431,8 +439,8 @@ def batch_balancer(pool_size=100, batch_size: int = 64):
                     return i
             return None
 
-        x = numpy.asarray([d[0] for d in data])
-        y = numpy.asarray([d[1] for d in data])
+        x = np.asarray([d[0] for d in data])
+        y = np.asarray([d[1] for d in data])
 
         # If the pool is not full, can't perform balancing
         if len(balance.pool_y) < pool_size:
@@ -441,11 +449,11 @@ def batch_balancer(pool_size=100, batch_size: int = 64):
 
         # Find the class that is over-represented
         for _ in range(repeat):
-            class_idx = numpy.argmax(numpy.sum(y, axis=0))
-            to_remove = numpy.where(y[:, class_idx] == 1)[0]
+            class_idx = np.argmax(np.sum(y, axis=0))
+            to_remove = np.where(y[:, class_idx] == 1)[0]
 
             if len(to_remove != 0):
-                to_remove = numpy.random.choice(to_remove)
+                to_remove = np.random.choice(to_remove)
 
                 # chose a file from the pool that is not from the class.
                 # consume the pool's sample to unsure the file isn't present twice
@@ -454,7 +462,7 @@ def batch_balancer(pool_size=100, batch_size: int = 64):
                     x[to_remove] = balance.pool_x.pop(pool_idx)
                     y[to_remove] = balance.pool_y.pop(pool_idx)
 
-        return torch.from_numpy(x), torch.from_numpy(y)
+        return torch.from_np(x), torch.from_np(y)
 
     balance.pool_x = []
     balance.pool_y = []
@@ -486,10 +494,10 @@ def get_all_targets(dataset):
 
 
 def get_class_sum(all_targets, batch_indexes: list):
-    all_targets = numpy.asarray(all_targets)
-    all_indexes = numpy.hstack(batch_indexes)
+    all_targets = np.asarray(all_targets)
+    all_indexes = np.hstack(batch_indexes)
 
-    return numpy.sum(all_targets[all_indexes], axis=0)
+    return np.sum(all_targets[all_indexes], axis=0)
 
 
 def display_statistics(stats: list):
@@ -521,15 +529,15 @@ def display_statistics(stats: list):
 def get_class_statistic(dataset, batch_indexes: list):
     """Using a list of number of occurence per class, compute the basic statistic needed to evaluate the quality of the split"""
     all_targets = get_all_targets(dataset)
-    total_sum = numpy.sum(all_targets, axis=0)
+    total_sum = np.sum(all_targets, axis=0)
     class_sum = get_class_sum(all_targets, batch_indexes)
 
     dist = class_sum / total_sum
 
-    mean = numpy.mean(dist)
-    std = numpy.std(dist)
-    mini = numpy.min(dist)
-    maxi = numpy.max(dist)
+    mean = np.mean(dist)
+    std = np.std(dist)
+    mini = np.min(dist)
+    maxi = np.max(dist)
     occur = int(sum(class_sum))
     missing = len(class_sum[class_sum == 0])
 
@@ -566,7 +574,7 @@ def class_balance_split(
     """
 
     def fill_subset(remaining_samples, expected):
-        subset_occur = numpy.zeros(shape=(527,))
+        subset_occur = np.zeros(shape=(527,))
         subset = []
 
         with tqdm(total=sum(expected)) as progress:
@@ -584,7 +592,7 @@ def class_balance_split(
 
                     idx += 1
 
-        return numpy.asarray(subset), remaining_samples
+        return np.asarray(subset), remaining_samples
 
     if unsupervised_ratio is None:
         unsupervised_ratio = 1 - supervised_ratio
@@ -609,9 +617,9 @@ def class_balance_split(
     _, _, original_statistics = get_class_statistic(dataset, all_batches)
 
     # expected occurance and tolerance
-    total_occur = numpy.sum(all_targets, axis=0)
-    s_expected_occur = numpy.ceil(total_occur * supervised_ratio)
-    u_expected_occur = numpy.ceil(total_occur * unsupervised_ratio)
+    total_occur = np.sum(all_targets, axis=0)
+    s_expected_occur = np.ceil(total_occur * supervised_ratio)
+    u_expected_occur = np.ceil(total_occur * unsupervised_ratio)
     print("s expected occur: ", sum(s_expected_occur))
 
     # loop through the dataset and constitute the two subset.
@@ -622,7 +630,7 @@ def class_balance_split(
 
     # For the unsupervised subset, if automatic set, then it is the remaining samples
     if unsupervised_ratio + supervised_ratio == 1.0:
-        u_subset = numpy.asarray([s[1] for s in remaining_sample])
+        u_subset = np.asarray([s[1] for s in remaining_sample])
 
     else:
         u_subset, _ = fill_subset(remaining_sample, u_expected_occur)
@@ -661,8 +669,8 @@ def get_supervised(version: str = "unbalanced", **kwargs):
         rdcc_nbytes: int = 512 * 1024 ** 2,
         data_shape: tuple = (64, 500,),
         data_key: str = "data",
-        train_transform: Module = None,
-        val_transform: Module = None,
+        train_transform: Optional[nn.Module] = None,
+        val_transform: Optional[nn.Module] = None,
         batch_size: int = 64,
         supervised_ratio: float = 1.0,
         unsupervised_ratio: float = None,
@@ -743,8 +751,8 @@ def get_mean_teacher(version: str = "unbalanced", **kwargs):
         rdcc_nbytes: int = 512 * 1024 ** 2,
         data_shape: tuple = (64, 500,),
         data_key: str = "data",
-        train_transform: Module = None,
-        val_transform: Module = None,
+        train_transform: Optional[nn.Module] = None,
+        val_transform: Optional[nn.Module] = None,
         batch_size: int = 64,
         supervised_ratio: float = 1.0,
         unsupervised_ratio: float = None,
@@ -788,8 +796,8 @@ def get_mean_teacher(version: str = "unbalanced", **kwargs):
             verbose=True,
         )
 
-        s_batch_size = int(numpy.floor(batch_size * supervised_ratio))
-        u_batch_size = int(numpy.ceil(batch_size * (1 - supervised_ratio)))
+        s_batch_size = int(np.floor(batch_size * supervised_ratio))
+        u_batch_size = int(np.ceil(batch_size * (1 - supervised_ratio)))
 
         s_sampler = SingleBalancedSampler(train_dataset, s_idx, shuffle=True)
         u_sampler = SingleBalancedSampler(train_dataset, u_idx, shuffle=True)
@@ -814,8 +822,8 @@ def get_dct(version: str = "unbalanced", **kwargs):
         rdcc_nbytes: int = 512 * 1024 ** 2,
         data_shape: tuple = (64, 500,),
         data_key: str = "data",
-        train_transform: Module = None,
-        val_transform: Module = None,
+        train_transform: Optional[nn.Module] = None,
+        val_transform: Optional[nn.Module] = None,
         batch_size: int = 64,
         supervised_ratio: float = 1.0,
         unsupervised_ratio: float = None,
@@ -859,8 +867,8 @@ def get_dct(version: str = "unbalanced", **kwargs):
             verbose=True,
         )
 
-        s_batch_size = int(numpy.floor(batch_size * supervised_ratio))
-        u_batch_size = int(numpy.ceil(batch_size * (1 - supervised_ratio)))
+        s_batch_size = int(np.floor(batch_size * supervised_ratio))
+        u_batch_size = int(np.ceil(batch_size * (1 - supervised_ratio)))
 
         s_sampler = SingleBalancedSampler(train_dataset, s_idx, shuffle=True)
         u_sampler = SingleBalancedSampler(train_dataset, u_idx, shuffle=True)
@@ -890,8 +898,8 @@ def get_fixmatch(version: str = "unbalanced", **kwargs):
         rdcc_nbytes: int = 512 * 1024 ** 2,
         data_shape: tuple = (320000,),
         data_key: str = "waveform",
-        train_transform: Module = None,
-        val_transform: Module = None,
+        train_transform: Optional[nn.Module] = None,
+        val_transform: Optional[nn.Module] = None,
         batch_size: int = 64,
         supervised_ratio: float = 0.1,
         unsupervised_ratio: float = None,

@@ -1,23 +1,21 @@
-import numpy as np
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 from torch import nn
-import librosa
+from torchvision import models as torch_models
+from torchvision.models.resnet import Bottleneck, BasicBlock
 
-from SSL.layers import ConvPoolReLU, ConvReLU, ConvBNReLUPool, ConvAdvBNReLUPool
+from SSL.models.layers import ConvAdvBNReLUPool, ConvPoolReLU, ConvReLU
+from SSL.models.wideresnet import ResNet
 
 
 # =============================================================================
 #    MobileNet
 # =============================================================================
-from SSL.models.audioset import (
-    cnn14,
-    MobileNetV1,
-    MobileNetV2,
-)
 
 
 class cnn(nn.Module):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         nn.Module.__init__(self)
 
         self.features = nn.Sequential(
@@ -122,11 +120,6 @@ class cnn_advBN(nn.Module):
         x = self.classifier(x)
 
         return x
-
-
-import torchvision.models as torch_models
-from torchvision.models.resnet import Bottleneck, BasicBlock
-from SSL.models.wideresnet import ResNet
 
 
 class mResnet(torch_models.ResNet):

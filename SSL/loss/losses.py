@@ -1,9 +1,12 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 from enum import Enum
-from typing import Tuple, Optional
+from typing import Tuple
 
 import torch
-from torch import nn
-from torch import Tensor
+
+from torch import nn, Tensor
 
 
 class Activation(Enum):
@@ -21,7 +24,7 @@ class DCTSupWithLogitsLoss(nn.Module):
         self,
         reduction: str = "mean",
         sub_loss: ValidLoss = ValidLoss.BINARY_CROSS_ENTROPY,
-    ):
+    ) -> None:
         super().__init__()
 
         if sub_loss == ValidLoss.CROSS_ENTROPY:
@@ -135,7 +138,7 @@ def loss_cot(U_p1, U_p2, activation: Activation = Activation.SOFTMAX):
         LS = nn.LogSigmoid()
 
     else:
-        raise f"This activation ({activation}) is not available"
+        raise ValueError(f"This activation ({activation}) is not available")
 
     U_batch_size = U_p1.size()[0]
     eps = 1e-8

@@ -1,7 +1,10 @@
-from torchvision import transforms
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from typing import Tuple
+
 from torchvision.transforms import Compose
 from torchvision.transforms import ToTensor
-from typing import Tuple
 
 
 def supervised() -> Tuple[Compose, Compose]:

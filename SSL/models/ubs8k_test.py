@@ -1,18 +1,16 @@
-import numpy as np
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-from torch.nn import functional as F
+from typing import List, Tuple
+
 from torch import nn
-import librosa
+from torch.nn import functional as F
 
-from SSL.layers import (
+from SSL.models.layers import (
+    ConvBNPoolReLU6,
     ConvPoolReLU,
     ConvReLU,
-    ConvBNReLUPool,
-    ConvAdvBNReLUPool,
-    ConvBNPoolReLU6,
 )
-
-from typing import Tuple
 
 
 # ===============================================================
@@ -66,7 +64,7 @@ class WideResNet(nn.Module):
     def __init__(self, n_groups, N, n_classes, k=1, n_start=16):
         super().__init__()
         # Increase channels to n_start using conv layer
-        layers = [conv_2d(3, n_start)]
+        layers: List[nn.Module] = [conv_2d(3, n_start)]
         n_channels = [n_start]
 
         # Add groups of BasicBlock(increase channels & downsample)
@@ -128,8 +126,11 @@ class cnn0(nn.Module):
 
 class cnn03(nn.Module):
     def __init__(
-        self, input_shape: Tuple[int, int] = (64, 173), num_classes: int = 10, **kwargs
-    ) -> nn.Module:
+        self,
+        input_shape: Tuple[int, int] = (64, 173),
+        num_classes: int = 10,
+        **kwargs,
+    ) -> None:
         super().__init__()
 
         self.features = nn.Sequential(
@@ -343,36 +344,6 @@ class cnn07(nn.Module):
         return x
 
 
-class cnn06(nn.Module):
-    def __init__(self, **kwargs):
-        super().__init__()
-
-        self.features = nn.Sequential(
-            ConvPoolReLU(1, 24, 3, 1, 1, (4, 2), (4, 2)),
-            ConvPoolReLU(24, 48, 3, 1, 1, (4, 2), (4, 2)),
-            ConvPoolReLU(48, 72, 3, 1, 1, (2, 2), (2, 2)),
-            ConvPoolReLU(72, 72, 3, 1, 1, (2, 2), (2, 2)),
-            ConvReLU(72, 72, 3, 1, 1),
-        )
-
-        self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Dropout(0.5),
-            nn.Linear(720, 256),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.5),
-            nn.Linear(256, 10),
-        )
-
-    def forward(self, x):
-        x = x.view(-1, 1, *x.shape[1:])
-
-        x = self.features(x)
-        x = self.classifier(x)
-
-        return x
-
-
 class cnn1(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
@@ -553,7 +524,7 @@ class cnn61(nn.Module):
             nn.Dropout(0.5),
             nn.Linear(1600, 256),
             nn.ReLU6(inplace=True),
-            nn.DropOut(0.3),
+            nn.Dropout(0.3),
             nn.Linear(256, 10),
         )
 
