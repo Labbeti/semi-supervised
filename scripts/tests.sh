@@ -57,12 +57,22 @@ common="--config-name ${data} path.dataset_root=${dataset_root} path.tensorboard
 # args="augpool@stu_aug=${stu_aug} augpool@tea_aug=${tea_aug} mt.use_buffer_sync=${buffer_sync}"
 # ./run.sh ${method} ${common} ${args} tag="${rd}_data_${data}__method_${method}__stu_aug_${stu_aug}__tea_aug_${tea_aug}__buffer_sync_${buffer_sync}"
 
-# Run MT with Gaussian noise
+# # Run MT with Gaussian noise
+# method="mean-teacher"
+# stu_aug="ident"
+# tea_aug="ident"
+# pre_trans="noise"
+# use_mixup="false"
+
+# args="augpool@stu_aug=${stu_aug} augpool@tea_aug=${tea_aug} aug@pre_trans=${pre_trans} mixup.use=${use_mixup}"
+# ./run.sh ${method} ${common} ${args} tag="${rd}_data_${data}__method_${method}__stu_aug_${stu_aug}__tea_aug_${tea_aug}__pre_trans_${pre_trans}__use_mixup_${use_mixup}"
+
+# Run MT with SpecAug
 method="mean-teacher"
 stu_aug="ident"
 tea_aug="ident"
-pre_trans="noise"
+post_trans="spec_aug"
 use_mixup="false"
 
-args="augpool@stu_aug=${stu_aug} augpool@tea_aug=${tea_aug} aug@pre_trans=${pre_trans} mixup.use=${use_mixup}"
-./run.sh ${method} ${common} ${args} tag="${rd}_data_${data}__method_${method}__stu_aug_${stu_aug}__tea_aug_${tea_aug}__pre_trans_${pre_trans}__use_mixup_${use_mixup}"
+args="augpool@stu_aug=${stu_aug} augpool@tea_aug=${tea_aug} aug@post_trans=${post_trans} mixup.use=${use_mixup}"
+./run.sh ${method} ${common} ${args} tag="${rd}_data_${data}__method_${method}__stu_aug_${stu_aug}__tea_aug_${tea_aug}__post_trans_${post_trans}__use_mixup_${use_mixup}"
