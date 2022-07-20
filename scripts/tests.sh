@@ -39,22 +39,22 @@ tensorboard_root="/users/samova/elabbe/root_sslh/semi-supervised/logs"
 
 common="--config-name ${data} path.dataset_root=${dataset_root} path.tensorboard_root=${tensorboard_root}"
 
-# Re-run DCT+mixup+uweak
-method="deep-co-training"
-aug_s="ident"
-aug_u="weak"
+# # Re-run DCT+mixup+uweak
+# method="deep-co-training"
+# aug_s="ident"
+# aug_u="weak"
 
-args="augpool@aug_s=${aug_s} augpool@aug_u=${aug_u}"
-./run.sh ${method} ${common} ${args} tag="${rd}_data_${data}__method_${method}__aug_s_${aug_s}__aug_u_${aug_u}"
+# args="augpool@aug_s=${aug_s} augpool@aug_u=${aug_u}"
+# ./run.sh ${method} ${common} ${args} tag="${rd}_data_${data}__method_${method}__aug_s_${aug_s}__aug_u_${aug_u}"
 
-# Run MT+mixup with buffer sync
-method="mean-teacher"
-stu_aug="ident"
-tea_aug="ident"
-buffer_sync="true"
+# # Run MT+mixup with buffer sync
+# method="mean-teacher"
+# stu_aug="ident"
+# tea_aug="ident"
+# buffer_sync="true"
 
-args="augpool@stu_aug=${stu_aug} augpool@tea_aug=${tea_aug} mt.use_buffer_sync=${buffer_sync}"
-./run.sh ${method} ${common} ${args} tag="${rd}_data_${data}__method_${method}__stu_aug_${stu_aug}__tea_aug_${tea_aug}__buffer_sync_${buffer_sync}"
+# args="augpool@stu_aug=${stu_aug} augpool@tea_aug=${tea_aug} mt.use_buffer_sync=${buffer_sync}"
+# ./run.sh ${method} ${common} ${args} tag="${rd}_data_${data}__method_${method}__stu_aug_${stu_aug}__tea_aug_${tea_aug}__buffer_sync_${buffer_sync}"
 
 # Run MT with Gaussian noise
 method="mean-teacher"
@@ -63,5 +63,5 @@ tea_aug="ident"
 pre_trans="noise"
 use_mixup="false"
 
-args="augpool@stu_aug=${stu_aug} augpool@tea_aug=${tea_aug} aug@pre_trans=${pre_trans} mt.use_mixup=${use_mixup}"
+args="augpool@stu_aug=${stu_aug} augpool@tea_aug=${tea_aug} aug@pre_trans=${pre_trans} mixup.use=${use_mixup}"
 ./run.sh ${method} ${common} ${args} tag="${rd}_data_${data}__method_${method}__stu_aug_${stu_aug}__tea_aug_${tea_aug}__pre_trans_${pre_trans}__use_mixup_${use_mixup}"

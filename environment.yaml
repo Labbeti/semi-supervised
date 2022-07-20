@@ -1,4 +1,4 @@
-name: ssl
+name: env_leo
 channels:
   - pytorch
   - conda-forge
@@ -16,15 +16,16 @@ dependencies:
   - audioread=2.1.9=py38h578d9bd_0
   - backcall=0.2.0=pyhd3eb1b0_0
   - beautifulsoup4=4.9.3=pyha847dfd_0
+  - black=19.10b0=py_0
   - blas=1.0=mkl
   - bleach=3.3.0=pyhd3eb1b0_0
   - blinker=1.4=py38h06a4308_0
   - brotlipy=0.7.0=py38h497a2fe_1001
   - bzip2=1.0.8=h7f98852_4
   - c-ares=1.17.1=h27cfd23_0
-  - ca-certificates=2021.1.19=h06a4308_0
+  - ca-certificates=2022.4.26=h06a4308_0
   - cachetools=4.2.1=pyhd3eb1b0_0
-  - certifi=2020.12.5=py38h06a4308_0
+  - certifi=2022.6.15=py38h06a4308_0
   - cffi=1.14.5=py38ha65f79e_0
   - chardet=4.0.0=py38h578d9bd_1
   - click=7.1.2=pyhd3eb1b0_0
@@ -118,6 +119,7 @@ dependencies:
   - mkl-service=2.3.0=py38he904b0f_0
   - mkl_fft=1.2.1=py38h54f3939_0
   - mkl_random=1.1.1=py38h0573a6f_0
+  - mypy_extensions=0.4.3=py38h06a4308_1
   - nbclient=0.5.2=pyhd3eb1b0_0
   - nbconvert=6.0.7=py38_0
   - nbformat=5.1.2=pyhd3eb1b0_1
@@ -132,7 +134,7 @@ dependencies:
   - oauthlib=3.1.0=py_0
   - olefile=0.46=py_0
   - openh264=2.1.1=h780b84a_0
-  - openssl=1.1.1j=h27cfd23_0
+  - openssl=1.1.1n=h7f8727e_0
   - opt_einsum=3.1.0=py_0
   - packaging=20.9=pyh44b312d_0
   - pandas=1.2.2=py38ha9443f7_0
@@ -140,6 +142,7 @@ dependencies:
   - pandocfilters=1.4.3=py38h06a4308_1
   - parso=0.8.1=pyhd3eb1b0_0
   - patchelf=0.12=h2531618_1
+  - pathspec=0.7.0=py_0
   - pcre=8.44=he6710b0_0
   - pexpect=4.8.0=pyhd3eb1b0_3
   - pickleshare=0.7.5=pyhd3eb1b0_1003
@@ -188,6 +191,7 @@ dependencies:
   - six=1.15.0=py38h06a4308_0
   - soupsieve=2.1=pyhd3eb1b0_0
   - sqlite=3.33.0=h62c20be_0
+  - tensorboard=2.4.1=pyhd8ed1ab_1
   - tensorflow=2.3.0=eigen_py38h71ff20e_0
   - tensorflow-base=2.3.0=eigen_py38hb57a387_0
   - tensorflow-estimator=2.3.0=pyheb71bc4_0
@@ -196,10 +200,12 @@ dependencies:
   - testpath=0.4.4=pyhd3eb1b0_0
   - threadpoolctl=2.1.0=pyh5ca1d4c_0
   - tk=8.6.10=hbc83047_0
+  - toml=0.10.2=pyhd3eb1b0_0
   - torchvision=0.8.2=py38_cu102
   - tornado=6.1=py38h497a2fe_1
   - tqdm=4.56.0=pyhd3eb1b0_0
   - traitlets=5.0.5=pyhd3eb1b0_0
+  - typed-ast=1.4.3=py38h7f8727e_1
   - typing_extensions=3.7.4.3=pyha847dfd_0
   - tzdata=2020f=h52ac0ba_0
   - urllib3=1.26.3=pyhd8ed1ab_0
@@ -221,10 +227,8 @@ dependencies:
     - aiohttp==3.7.4.post0
     - antlr4-python3-runtime==4.8
     - async-timeout==3.0.1
-    - git+https://github.com/Leocances/augmentation_utils.git
-    - git+https://github.com/Labbeti/MLU.git@29836fe8b4982e40c86c5bd1b738fc09cc4c3673
-    - git+https://github.com/leocances/pytorch_metrics.git@61699381f262361a5a93c1e5a99b387a980e1d85
-    - git+https://github.com/leocances/UrbanSound8K.git@6c0761d0fdd963ae44b4e3610d735169f6391440
+    - audiomentations==0.25.1
+    - augmentation-utils==1.0.0
     - autopep8==1.5.5
     - flake8==3.8.4
     - fsspec==0.8.7
@@ -235,6 +239,8 @@ dependencies:
     - importlib-resources==5.1.2
     - markdown==3.3.3
     - mccabe==0.6.1
+    - metric-utils==2.0.0
+    - mlu==0.4.6
     - multidict==5.1.0
     - networkx==2.5
     - nltk==3.5
@@ -250,15 +256,14 @@ dependencies:
     - rouge-metric==1.0.1
     - rsa==4.7.1
     - scikit-image==0.18.1
-    - tensorboard==2.4.1
     - tensorboard-data-server==0.5.0
     - tensorboard-plugin-wit==1.8.0
     - tifffile==2021.2.1
-    - toml==0.10.2
     - torchaudio==0.7.2
     - torchlibrosa==0.0.7
     - torchmetrics==0.2.0
     - torchsummary==1.5.1
     - torchtext==0.8.1
+    - ubs8k==1.0.0
     - yarl==1.6.3
-prefix: /home/lcances/.miniconda3/envs/ssl
+prefix: /users/samova/elabbe/miniconda3/envs/env_leo
