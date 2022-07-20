@@ -67,6 +67,7 @@ def run(cfg: DictConfig) -> None:
         "mean-teacher",
         aug_cfg=cfg.tea_aug,
         pre_trans_cfg=cfg.pre_trans,
+        post_trans_cfg=cfg.post_trans,
     )
     has_same_trans = cfg.stu_aug == cfg.tea_aug
 
