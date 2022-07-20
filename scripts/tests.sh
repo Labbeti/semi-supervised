@@ -1,6 +1,7 @@
 #!/bin/bash
 
 rd="${RANDOM}"
+rd=`seq -f "%05g" ${rd} ${rd}`
 
 # --------------------------------------
 # RUN MT on GSC with augments
