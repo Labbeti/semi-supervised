@@ -1,0 +1,49 @@
+hydra:
+  hydra_logging:
+    disable_existing_loggers: false
+  run:
+    dir: .
+
+hardware:
+  nb_cpu: 0  # Cache is enabled
+  nb_gpu: 1
+
+dataset:
+  dataset: ComParE2021-PRS
+  num_classes: 5
+
+model:
+  model: MobileNetV2
+
+train_param:
+  supervised_ratio: 1.0
+  batch_size: 64
+  nb_iteration: 50000
+  learning_rate: 0.001
+  seed: 1234
+  resume: false
+  augmentation: null
+
+  train_folds: null
+  val_folds: null
+
+mixup:
+  use: true
+  alpha: 1.0
+  max: true
+  label: true
+
+specaugment:
+  use: true
+  time_drop_width: 12
+  time_stripe_num: 1
+  freq_drop_width: 4
+  freq_stripe_num: 1
+
+path:
+  dataset_root: ../../datasets
+  logs_root: ../..
+  checkpoint_path: ${path.logs_root}/model_save/${dataset.dataset}/supervised
+  tensorboard_path: ${path.logs_root}/tensorboard/${dataset.dataset}/supervised
+  sufix: ''
+  weight: ''

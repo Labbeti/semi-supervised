@@ -1,0 +1,37 @@
+hydra:
+  hydra_logging:
+    disable_existing_loggers: false
+  run:
+    dir: .
+
+hardware:
+  nb_cpu: 4
+  nb_gpu: 1
+
+dataset:
+  dataset: esc10
+  num_classes: 10
+
+model:
+  model: wideresnet28_2
+
+train_param:
+  supervised_ratio: 1.0
+  batch_size: 64
+  epochs: 100
+  learning_rate: 0.003
+  seed: 1234
+  resume: false
+  augmentation: null
+
+  # These two parameters bellow are used for UrbanSound8k and ESC cross validation
+  train_folds: [1,2,3,4]
+  val_folds: [5]
+
+path:
+  dataset_root: ../../datasets
+  logs_root: ../..
+  checkpoint_path: ${path.logs_root}/model_save/${dataset.dataset}/supervised
+  tensorboard_path: ${path.logs_root}/tensorboard/${dataset.dataset}/supervised
+  sufix: ''
+  weight: ''

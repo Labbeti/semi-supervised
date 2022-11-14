@@ -1,0 +1,64 @@
+# @package _global_
+
+defaults:
+  - augpool@stu_aug: ident
+  - augpool@tea_aug: ident
+  - aug@pre_trans: none
+  - aug@post_trans: none
+  - hydra/job_logging: custom  # redirect log file to output_subdir
+
+hydra:
+  hydra_logging:
+    disable_existing_loggers: false
+  run:
+    dir: .
+  # Set args save in board dir
+  output_subdir: ${path.tensorboard_path}/hydra
+
+hardware:
+  nb_cpu: 4
+  nb_gpu: 1
+
+dataset:
+  dataset: gsc
+  num_classes: 35
+
+model:
+  model: wideresnet28_2
+
+train_param:
+  supervised_ratio: 0.1
+  batch_size: 64
+  epochs: 200
+  learning_rate: 0.001
+  seed: 1234
+  resume: false
+
+  # These two parameters bellow are used for UrbanSound8k and ESC cross validation
+  train_folds: null
+  val_folds: null
+
+# Mean teacher parameters
+mt:
+  alpha: 0.999
+  warmup_length: 50
+  lambda_ccost_max: 1
+  use_softmax: true
+  ccost_method: mse
+  use_buffer_sync: false
+
+# MixUp parameters
+mixup:
+  use: true
+  alpha: 1.0
+  max: true
+  label: true
+
+path:
+  dataset_root: data
+  tensorboard_root: logs
+  tensorboard_path: ${path.tensorboard_root}/${dataset.dataset}/mean-teacher
+
+tag: "NOTAG"
+resume: null
+download: false

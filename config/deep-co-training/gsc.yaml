@@ -1,0 +1,60 @@
+# @package _global_
+
+defaults:
+  - augpool@aug_s: ident
+  - augpool@aug_u: ident
+  - hydra/job_logging: custom  # redirect log file to output_subdir
+
+hydra:
+  hydra_logging:
+    disable_existing_loggers: false
+  run:
+    dir: .
+  output_subdir: ${path.tensorboard_path}/hydra
+
+hardware:
+  nb_cpu: 4
+  nb_gpu: 1
+
+dataset:
+  dataset: gsc
+  num_classes: 35
+
+model:
+  model: wideresnet28_2
+
+train_param:
+  supervised_ratio: 0.1
+  batch_size: 64
+  epochs: 300
+  learning_rate: 0.0005
+  seed: 1234
+  resume: false
+
+  # These two parameters bellow are used for UrbanSound8k and ESC cross validation
+  train_folds: null
+  val_folds: null
+
+# DCT parameters
+dct:
+  epsilon: 0.02
+  warmup_length: 160
+  lambda_cot_max: 1
+  lambda_diff_max: 0.5
+  enable_autocast: true
+
+# MixUp parameters
+mixup:
+  use: true
+  alpha: 1.0
+  max: true
+  label: true
+
+path:
+  dataset_root: data
+  tensorboard_root: logs
+  tensorboard_path: ${path.tensorboard_root}/${dataset.dataset}/deep-co-training
+
+tag: "NOTAG"
+resume: null
+download: false

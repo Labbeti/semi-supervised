@@ -1,0 +1,5 @@
+# @package augpool
+
+- type: "spectrogram"
+  aug:
+    _target_: "torch.nn.Identity"
