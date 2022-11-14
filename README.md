@@ -6,7 +6,7 @@ If you meet problems to run experiments, you can contact me at `labbeti.pub@gmai
 
 # Requirements
 ```bash
-git clone https://github.com/leocances/semi-supervised.git
+git clone https://github.com/Labbeti/semi-supervised
 
 cd semi-supervised
 conda env create -f environment.yaml
@@ -121,3 +121,25 @@ WIP
 
 ## Available methods
 WIP -->
+
+## Cite this repository
+If you use this code, you can cite the following paper associated :
+```
+@article{cances_comparison_2022,
+	title = {Comparison of semi-supervised deep learning algorithms for audio classification},
+	volume = {2022},
+	issn = {1687-4722},
+	url = {https://doi.org/10.1186/s13636-022-00255-6},
+	doi = {10.1186/s13636-022-00255-6},
+	abstract = {In this article, we adapted five recent SSL methods to the task of audio classification. The first two methods, namely Deep Co-Training (DCT) and Mean Teacher (MT), involve two collaborative neural networks. The three other algorithms, called MixMatch (MM), ReMixMatch (RMM), and FixMatch (FM), are single-model methods that rely primarily on data augmentation strategies. Using the Wide-ResNet-28-2 architecture in all our experiments, 10\% of labeled data and the remaining 90\% as unlabeled data for training, we first compare the error rates of the five methods on three standard benchmark audio datasets: Environmental Sound Classification (ESC-10), UrbanSound8K (UBS8K), and Google Speech Commands (GSC). In all but one cases, MM, RMM, and FM outperformed MT and DCT significantly, MM and RMM being the best methods in most experiments. On UBS8K and GSC, MM achieved 18.02\% and 3.25\% error rate (ER), respectively, outperforming models trained with 100\% of the available labeled data, which reached 23.29\% and 4.94\%, respectively. RMM achieved the best results on ESC-10 (12.00\% ER), followed by FM which reached 13.33\%. Second, we explored adding the mixup augmentation, used in MM and RMM, to DCT, MT, and FM. In almost all cases, mixup brought consistent gains. For instance, on GSC, FM reached 4.44\% and 3.31\% ER without and with mixup. Our PyTorch code will be made available upon paper acceptance at https://github.com/Labbeti/SSLH.},
+	number = {1},
+	journal = {EURASIP Journal on Audio, Speech, and Music Processing},
+	author = {Cances, Léo and Labbé, Etienne and Pellegrini, Thomas},
+	month = sep,
+	year = {2022},
+	pages = {23},
+}
+```
+
+## Contact
+- Etienne Labbé "Labbeti" (maintainer) : labbeti.pub@gmail.com
