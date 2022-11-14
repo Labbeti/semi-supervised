@@ -1,6 +1,7 @@
 # Semi Supervised Learning - Deep Co-Training
 
 Application of Deep Co-Training for audio tagging on multiple audio dataset.
+
 If you meet problems to run experiments, you can contact me at `labbeti.pub@gmail.com`.
 
 # Requirements
@@ -76,7 +77,7 @@ You can override the parameters from the configuration file by doing the followi
 python supervised.py -cn ../../config/supervised/speechcommand.yaml model.model=resnet50
 ```
 
-# Basic API [WIP]
+# Basic API
 I am currently trying to make a main script from which it will possible to train and use the models easily.
 This documentation is more for my personnal use and is not exaustif yet. It is better to use directly the proper training script with the conrresponding configuration file.
 
@@ -108,7 +109,7 @@ This documentation is more for my personnal use and is not exaustif yet. It is b
         -w ../model_save/ComParE2021-PRS/supervised/wideresnet28_2/wideresnet28_2__0.003-lr_1.0-sr_50000-e_32-bs_1234-seed.best
     ```
 
-- **cross-validation**
+<!-- - **cross-validation**
     - WIP    
 
 
@@ -119,4 +120,4 @@ WIP
 WIP
 
 ## Available methods
-WIP
+WIP -->
