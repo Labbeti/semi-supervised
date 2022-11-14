@@ -5,7 +5,7 @@ from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LambdaLR
 
 
-def lr_lambda(e):
+def lr_lambda(e: int) -> float:
     if e < 60:
         return 1
 

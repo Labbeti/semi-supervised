@@ -1,8 +1,14 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from typing import Callable, List, Optional, Type
+
 import torch
-from torch import nn
+
+from torch import Tensor, nn
 
 
-def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
+def conv3x3(in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1) -> nn.Conv2d:
     """3x3 convolution with padding"""
     return nn.Conv2d(
         in_planes,
@@ -16,7 +22,7 @@ def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
     )
 
 
-def conv1x1(in_planes, out_planes, stride=1):
+def conv1x1(in_planes: int, out_planes: int, stride: int = 1) -> nn.Conv2d:
     """1x1 convolution"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
 
@@ -26,16 +32,17 @@ class BasicBlock(nn.Module):
 
     def __init__(
         self,
-        inplanes,
-        planes,
-        stride=1,
-        downsample=None,
-        groups=1,
-        base_width=64,
-        dilation=1,
-        norm_layer=None,
-    ):
+        inplanes: int,
+        planes: int,
+        stride: int = 1,
+        downsample: Optional[Callable] = None,
+        groups: int = 1,
+        base_width: int = 64,
+        dilation: int = 1,
+        norm_layer: Optional[Type] = None,
+    ) -> None:
         super(BasicBlock, self).__init__()
+        assert norm_layer is not None
 
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv3x3(inplanes, planes, stride)
@@ -48,7 +55,7 @@ class BasicBlock(nn.Module):
 
         self.expansion = 2
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         identity = x
 
         out = self.conv1(x)
@@ -70,15 +77,15 @@ class BasicBlock(nn.Module):
 class ResNet(nn.Module):
     def __init__(
         self,
-        layers,
+        layers: List[int],
         width: int = 2,
-        num_classes=10,
-        zero_init_residual=False,
-        groups=1,
-        width_per_group=16,
-        replace_stride_with_dilation=None,
-        norm_layer=None,
-    ):
+        num_classes: int = 10,
+        zero_init_residual: bool = False,
+        groups: int = 1,
+        width_per_group: int = 16,
+        replace_stride_with_dilation: Optional[List[bool]] = None,
+        norm_layer: Optional[Type] = None,
+    ) -> None:
         nn.Module.__init__(self)
 
         if norm_layer is None:
@@ -143,7 +150,7 @@ class ResNet(nn.Module):
                 # elif isinstance(m, Bottleneck):
                 #     nn.init.constant_(m.bn3.weight, 0)
 
-    def _make_layer(self, block, planes, blocks, stride=1, dilate=False):
+    def _make_layer(self, block: Callable, planes: int, blocks: int, stride: int = 1, dilate: bool = False) -> nn.Sequential:
         norm_layer = self._norm_layer
         downsample = None
         previous_dilation = self.dilation
@@ -184,7 +191,7 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def _forward_impl(self, x):
+    def _forward_impl(self, x: Tensor) -> Tensor:
         # See note [TorchScript super()]
         x = self.conv1(x)
         x = self.bn1(x)
@@ -201,5 +208,5 @@ class ResNet(nn.Module):
 
         return x
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         return self._forward_impl(x)

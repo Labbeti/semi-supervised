@@ -1,15 +1,20 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import logging
+
+from logging import LogRecord
+from typing import Any, Union
+
 import numpy as np
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-from logging import LogRecord
-from typing import Optional
 
 
-def log_flat(array) -> str:
+def log_flat(array: Any) -> Union[int, float, bool, str]:
     if isinstance(array, (int, float, bool, str)):
         return array
-    return "[" + ", ".join(map(str, np.asarray(array).reshape(-1))) + "]"
+    return "[" + ", ".join(map(str, np.array(array).reshape(-1))) + "]"
 
 
 """
@@ -58,5 +63,5 @@ DEFAULT_LOGGING = {
             "stream": "ext://sys.stdout",  # Default is stderr
         },
     },
-    "loggers": {"": {"handlers": ["default"], "level": "DEBUG",},},
+    "loggers": {"": {"handlers": ["default"], "level": "DEBUG"}},
 }

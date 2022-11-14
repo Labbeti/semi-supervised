@@ -25,7 +25,7 @@ from torchsummary import summary
 
 from metric_utils.metrics import ContinueAverage, CategoricalAccuracy, FScore, Metrics
 from SSL.loss.losses import JensenShanon
-from SSL.ramps import Warmup, sigmoid_rampup
+from SSL.util.ramps import Warmup, sigmoid_rampup
 from SSL.util.checkpoint import CheckPoint, CustomSummaryWriter
 from SSL.util.loaders import (
     load_callbacks,
@@ -67,6 +67,7 @@ def run(cfg: DictConfig) -> None:
         "mean-teacher",
         aug_cfg=cfg.tea_aug,
         pre_trans_cfg=cfg.pre_trans,
+        post_trans_cfg=cfg.post_trans,
     )
     has_same_trans = cfg.stu_aug == cfg.tea_aug
 
@@ -256,7 +257,9 @@ def run(cfg: DictConfig) -> None:
 
     # Update the teacher using exponentiel moving average
     def update_teacher_model(
-        student_model: nn.Module, teacher_model: nn.Module, alpha: float,
+        student_model: nn.Module,
+        teacher_model: nn.Module,
+        alpha: float,
     ) -> None:
         for stu_param, tea_param in zip(
             student_model.parameters(), teacher_model.parameters(),
@@ -265,7 +268,9 @@ def run(cfg: DictConfig) -> None:
 
     # For applying mixup
     mixup_fn = MixUpBatchShuffle(
-        alpha=cfg.mixup.alpha, apply_max=cfg.mixup.max, mix_labels=cfg.mixup.label,
+        alpha=cfg.mixup.alpha, 
+        apply_max=cfg.mixup.max,
+        mix_labels=cfg.mixup.label,
     )
 
     def train(epoch: int) -> None:

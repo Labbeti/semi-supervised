@@ -1,8 +1,12 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from typing import Callable
+
 from mlu.nn import CrossEntropyWithVectors, get_reduction_from_name
 
 from torch import Tensor
 from torch.nn import Module
-from typing import Callable
 
 __author__ = "Etienne Labbe"
 

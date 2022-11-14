@@ -1,14 +1,19 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 # =============================================================================
 #    PyTorch RESNET
 # =============================================================================
-import torchvision.models as torch_models
+from typing import List
+
 import torch
-import time
+import torchvision.models as torch_models
+
 from torch import nn
 from torch.nn import functional as F
 from torchvision.models.resnet import Bottleneck, BasicBlock
+
 from SSL.models.wideresnet import ResNet
-from torchlibrosa.augmentation import SpecAugmentation
 
 
 class mResnet(torch_models.ResNet):
@@ -169,10 +174,10 @@ class cnn14(nn.Module):
         x = x1 + x2
         x = F.dropout(x, p=0.5, training=self.training)
         x = F.relu_(self.fc1(x))
-        embedding = F.dropout(x, p=0.5, training=self.training)
+        # embedding = F.dropout(x, p=0.5, training=self.training)
         clipwise_output = self.fc_audioset(x)
 
-        output_dict = {"clipwise_output": clipwise_output, "embedding": embedding}
+        # output_dict = {"clipwise_output": clipwise_output, "embedding": embedding}
 
         return clipwise_output
 
@@ -283,10 +288,10 @@ class MobileNetV1(nn.Module):
         x = x1 + x2
         x = F.dropout(x, p=0.5, training=self.training)
         x = F.relu_(self.fc1(x))
-        embedding = F.dropout(x, p=0.5, training=self.training)
+        # embedding = F.dropout(x, p=0.5, training=self.training)
         clipwise_output = self.fc_audioset(x)
 
-        output_dict = {"clipwise_output": clipwise_output, "embedding": embedding}
+        # output_dict = {"clipwise_output": clipwise_output, "embedding": embedding}
 
         return clipwise_output
 
@@ -399,7 +404,7 @@ class MobileNetV2(nn.Module):
         self.last_channel = (
             int(last_channel * width_mult) if width_mult > 1.0 else last_channel
         )
-        self.features = [conv_bn(1, input_channel, 2)]
+        self.features: List[nn.Module] = [conv_bn(1, input_channel, 2)]
         # building inverted residual blocks
         for t, c, n, s in interverted_residual_setting:
             output_channel = int(c * width_mult)

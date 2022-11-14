@@ -2,10 +2,13 @@
 # -*- coding: utf-8 -*-
 
 import math
+
+from typing import Callable
+
 import numpy as np
 
 
-def linear_rampup(current_epoch, ramp_length):
+def linear_rampup(current_epoch: int, ramp_length: int) -> float:
     if ramp_length == 0:
         return 0.0
 
@@ -15,7 +18,7 @@ def linear_rampup(current_epoch, ramp_length):
     return current_epoch / ramp_length
 
 
-def cosine_rampup(current_epoch, ramp_length):
+def cosine_rampup(current_epoch: int, ramp_length: int) -> float:
     """Cosine rampdown from https://arxiv.org/abs/1608.03983"""
     if ramp_length == 0:
         return 0.0
@@ -26,7 +29,7 @@ def cosine_rampup(current_epoch, ramp_length):
     return -float(0.5 * (math.cos(math.pi * current_epoch / ramp_length) - 1))
 
 
-def sigmoid_rampup(current_epoch, ramp_length):
+def sigmoid_rampup(current_epoch: int, ramp_length: int) -> float:
     """
     https://arxiv.org/pdf/1803.05984.pdf
     Exponential rampup from https://arxiv.org/abs/1610.02242
@@ -42,7 +45,7 @@ def sigmoid_rampup(current_epoch, ramp_length):
     return float(math.exp(-5.0 * phase * phase))
 
 
-def sigmoid_rampdown(current_epoch, ramp_length):
+def sigmoid_rampdown(current_epoch: int, ramp_length: int) -> float:
     if ramp_length == 0:
         return 1.0
 
@@ -55,18 +58,18 @@ def sigmoid_rampdown(current_epoch, ramp_length):
 
 
 class Warmup:
-    def __init__(self, max, epochs, method):
+    def __init__(self, max: float, epochs: int, method: Callable[[int, int], float]) -> None:
         self.max = max
         self.epochs = epochs
         self.method = method
         self.current_epoch = 0
         self.value = method(0, epochs)
 
-    def reset(self):
+    def reset(self) -> None:
         self.current_epoch = 0
         self.value = self.method(0, self.epochs)
 
-    def step(self):
+    def step(self) -> float:
         if self.current_epoch < self.epochs:
             self.current_epoch += 1
             ramp = self.method(self.current_epoch, self.epochs)
@@ -74,11 +77,11 @@ class Warmup:
 
         return self.value
 
-    def __call__(self):
+    def __call__(self) -> float:
         return self.value
 
 
-if __name__ == "__main__":
+def test_warmup() -> None:
     linear_warmup = Warmup(10, 80, linear_rampup)
     exp_warmup = Warmup(10, 80, sigmoid_rampup)
     cosine_warmup = Warmup(10, 80, cosine_rampup)
@@ -105,3 +108,7 @@ if __name__ == "__main__":
     plt.plot(cosine_values, label="sigmoid")
     plt.legend()
     plt.show()
+
+
+if __name__ == "__main__":
+    test_warmup()

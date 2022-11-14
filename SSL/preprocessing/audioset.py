@@ -1,11 +1,16 @@
-from SSL.util.transforms import ComposeAugmentation, ToTensor
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 from torch.nn import Sequential
 from torchaudio.transforms import MelSpectrogram, AmplitudeToDB
+
 from augmentation_utils.signal_augmentations import Occlusion, SignalAugmentation
 from augmentation_utils.spec_augmentations import SpecAugmentation
 from mlu.transforms import WaveformTransform, SpectrogramTransform
 from mlu.transforms.waveform import StretchPadCrop
 from mlu.transforms.spectrogram import CutOutSpec
+
+from SSL.util.transforms import ComposeAugmentation, ToTensor
 
 
 def supervised():

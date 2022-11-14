@@ -3,7 +3,8 @@
 defaults:
   - augpool@stu_aug: ident
   - augpool@tea_aug: ident
-  - aug@pre_trans: ident
+  - aug@pre_trans: none
+  - aug@post_trans: none
   - hydra/job_logging: custom  # redirect log file to output_subdir
 
 hydra:
