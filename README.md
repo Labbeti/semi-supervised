@@ -1,6 +1,7 @@
 # Semi Supervised Learning - Deep Co-Training
 
 Application of Deep Co-Training for audio tagging on multiple audio dataset.
+If you meet problems to run experiments, you can contact me at `labbeti.pub@gmail.com`.
 
 # Requirements
 ```bash
