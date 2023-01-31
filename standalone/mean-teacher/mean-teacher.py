@@ -14,18 +14,16 @@ from typing import Any, Dict, Union
 
 import hydra
 import torch
-from torch import nn
-from torch.nn import functional as F
 import yaml
 
 from omegaconf import DictConfig, OmegaConf
-from torch import Tensor
+from torch import nn, Tensor
+from torch.nn import functional as F
 from torch.nn.parallel import DataParallel
 from torchsummary import summary
 
 from metric_utils.metrics import ContinueAverage, CategoricalAccuracy, FScore, Metrics
 from SSL.loss.losses import JensenShanon
-from SSL.util.ramps import Warmup, sigmoid_rampup
 from SSL.util.checkpoint import CheckPoint, CustomSummaryWriter
 from SSL.util.loaders import (
     load_callbacks,
@@ -35,6 +33,7 @@ from SSL.util.loaders import (
 )
 from SSL.util.mixup import MixUpBatchShuffle
 from SSL.util.model_loader import load_model
+from SSL.util.ramps import Warmup, sigmoid_rampup
 from SSL.util.utils import (
     DotDict,
     ZipCycle,
